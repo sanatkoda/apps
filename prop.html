@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<title>Prop Firm Kereskedési Szimulátor PRO</title>
+
+<style>
+body { margin:0; font-family:Arial, sans-serif; background:#0f172a; color:white;}
+.container { display:grid; grid-template-columns:380px 1fr; height:100vh;}
+.sidebar { padding:20px; border-right:1px solid #333; overflow:auto;}
+.main { padding:20px; overflow:auto;}
+input, select { width:100%; padding:8px; margin-top:4px; background:#111; border:1px solid #333; color:white; box-sizing: border-box; border-radius: 4px;}
+.input-group { margin-bottom:12px;}
+.card { background:#111827; padding:15px; border-radius:12px; margin-bottom:15px;}
+canvas { background:#000; border-radius: 8px;}
+table { width:100%; border-collapse: collapse; font-size:12px;}
+th, td { border:1px solid #333; padding:6px; text-align:right;}
+th { background:#1e293b; color: #94a3b8; text-align:center;}
+
+/* Gombok stílusa */
+.storage-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 15px;
+}
+.btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  color: white;
+  font-size: 13px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.btn-save { background: #3b82f6; }
+.btn-save:hover { background: #2563eb; }
+.btn-load { background: #10b981; }
+.btn-load:hover { background: #059669; }
+.file-wrapper { position: relative; flex: 1; overflow: hidden; }
+.file-wrapper input[type="file"] {
+  position: absolute;
+  left: 0; top: 0; opacity: 0;
+  cursor: pointer; height: 100%; width: 100%;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.stat-box {
+  background: #1e293b;
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+.stat-title { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+.stat-value { font-size: 18px; font-weight: bold; margin-top: 4px; }
+.positive { color: #22c55e; }
+.negative { color: #ef4444; }
+.neutral { color: #3b82f6; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="sidebar">
+
+<div class="storage-actions">
+  <button class="btn btn-save" onclick="exportInputs()">💾 Mentés</button>
+  <div class="file-wrapper">
+    <button class="btn btn-load">📂 Betöltés</button>
+    <input type="file" id="fileImporter" accept=".json" onchange="importInputs(event)">
+  </div>
+</div>
+
+<div class="input-group"><label>Challenge ára ($)</label><input id="challengePrice" value="500"></div>
+<div class="input-group"><label>Challenge számlaméret ($)</label><input id="accountSize" value="100000"></div>
+
+<hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+
+<div class="input-group"><label>Max párhuzamos futó számla (Challenge + Live)</label><input id="maxParallelChallenges" value="2"></div>
+<div class="input-group"><label>Hány havonta indítok új challenge-et?</label><input id="buyIntervalMonths" value="1"></div>
+
+<hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+
+<div class="input-group"><label>Challenge teljesítés időtartama (hónap)</label><input id="challengeDuration" value="2"></div>
+<div class="input-group"><label>Live számla átlagos élettartama (hónap)</label><input id="liveLifespan" value="6"></div>
+
+<hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+
+<div class="input-group"><label>Live számla átlagos havi profit (%)</label><input id="monthlyProfitPct" value="4"></div>
+<div class="input-group"><label>Live számla kifizetés (%)</label><input id="payoutPct" value="80"></div>
+
+<hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+
+<div class="input-group"><label>Adó (%)</label><input id="taxPct" value="15"></div>
+
+<hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+
+<div class="input-group"><label>Szimuláció hossza (hónap)</label><input id="simMonths" value="24"></div>
+
+</div>
+
+<div class="main">
+
+<div class="card">
+  <div class="summary-grid" id="summaryGrid"></div>
+  <div id="hoverInfo" style="font-size: 13px; color: #cbd5e1; margin-top: 5px; height: 20px;"></div>
+</div>
+
+<div class="card">
+  <canvas id="chart" width="900" height="380"></canvas>
+</div>
+
+<div class="card">
+<table id="table">
+<thead>
+<tr>
+<th>Hónap</th>
+<th>Futó Challenge</th>
+<th>Futó Live számla</th>
+<th>Havi Kiadás ($)</th>
+<th>Bruttó Kifizetés ($)</th>
+<th>Nettó Nyereség ($)</th>
+<th>Kummulált Eredmény ($)</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+function num(id){ return parseFloat(document.getElementById(id).value) || 0; }
+
+let simHistory = [];
+
+function calculate(){
+  const challengePrice = num("challengePrice");
+  const accountSize = num("accountSize");
+  const maxTotalAccounts = Math.max(1, Math.round(num("maxParallelChallenges")));
+  const buyIntervalMonths = Math.max(1, Math.round(num("buyIntervalMonths")));
+  const challengeDuration = Math.max(1, Math.round(num("challengeDuration")));
+  const liveLifespan = Math.max(1, Math.round(num("liveLifespan")));
+  const monthlyProfitPct = num("monthlyProfitPct") / 100;
+  const payoutPct = num("payoutPct") / 100;
+  const taxPct = num("taxPct") / 100;
+  const simMonths = Math.max(1, Math.round(num("simMonths")));
+
+  let activeChallenges = []; // { id, startMonth, totalMonthsPassed }
+  let activeLiveAccounts = []; // { id, startMonth, liveMonthsPassed }
+  let accountIdCounter = 1;
+
+  let cumulativeNet = 0;
+  let totalSpent = 0;
+  let totalGrossPayout = 0;
+  let totalTaxPaid = 0;
+
+  simHistory = [];
+
+  for(let m = 1; m <= simMonths; m++){
+    
+    // 1. Meglévő live számlák élettartamának növelése & lejártak törlése
+    activeLiveAccounts.forEach(acc => acc.liveMonthsPassed++);
+    activeLiveAccounts = activeLiveAccounts.filter(acc => acc.liveMonthsPassed <= liveLifespan);
+
+    // 2. Meglévő challenge-ek előreléptetése
+    let remainingChallenges = [];
+    let newlyPassedChallenges = [];
+
+    activeChallenges.forEach(ch => {
+      ch.totalMonthsPassed++;
+      if (ch.totalMonthsPassed >= challengeDuration) {
+        newlyPassedChallenges.push(ch);
+      } else {
+        remainingChallenges.push(ch);
+      }
+    });
+
+    activeChallenges = remainingChallenges;
+
+    // 3. A sikeresen teljesített challenge-ek átsorolása LIVE számlává ebben a hónapban
+    newlyPassedChallenges.forEach(ch => {
+      activeLiveAccounts.push({
+        id: ch.id,
+        startMonth: m,
+        liveMonthsPassed: 0 // Azonnal megkezdődik az 1. éles hónapja
+      });
+    });
+
+    // 4. Új Challenge vásárlása (egyszeri díj kifizetése az indítás hónapjában)
+    let challengeExpense = 0;
+    const currentTotalAccounts = activeChallenges.length + activeLiveAccounts.length;
+
+    if ((m - 1) % buyIntervalMonths === 0) {
+      if (currentTotalAccounts < maxTotalAccounts) {
+        challengeExpense = challengePrice;
+        activeChallenges.push({
+          id: accountIdCounter++,
+          startMonth: m,
+          totalMonthsPassed: 0
+        });
+      }
+    }
+
+    // 5. Bevételek kiszámítása az aktív live számlákból
+    // Egy live számla akkor termel kifizetést, ha már az 1. éles hónapját (vagy többet) teljesíti
+    const producingLiveAccounts = activeLiveAccounts.filter(acc => acc.liveMonthsPassed > 0).length;
+    
+    const grossPayoutThisMonth = producingLiveAccounts * (accountSize * monthlyProfitPct * payoutPct);
+    const taxThisMonth = grossPayoutThisMonth * taxPct;
+    const netPayoutThisMonth = grossPayoutThisMonth - taxThisMonth;
+
+    const monthlyNetProfit = netPayoutThisMonth - challengeExpense;
+    cumulativeNet += monthlyNetProfit;
+
+    totalSpent += challengeExpense;
+    totalGrossPayout += grossPayoutThisMonth;
+    totalTaxPaid += taxThisMonth;
+
+    simHistory.push({
+      month: m,
+      challenges: activeChallenges.length,
+      liveAccounts: activeLiveAccounts.length,
+      expense: challengeExpense,
+      grossPayout: grossPayoutThisMonth,
+      tax: taxThisMonth,
+      netProfit: monthlyNetProfit,
+      cumulativeNet: cumulativeNet
+    });
+  }
+
+  updateSummary(cumulativeNet, totalSpent, totalGrossPayout, totalTaxPaid);
+  drawChart(simHistory);
+  renderTable(simHistory);
+}
+
+function updateSummary(totalNet, totalSpent, totalGross, totalTax) {
+  const grid = document.getElementById("summaryGrid");
+  grid.innerHTML = `
+    <div class="stat-box" style="border-left-color: ${totalNet >= 0 ? '#22c55e' : '#ef4444'}">
+      <div class="stat-title">Nettó Végeredmény</div>
+      <div class="stat-value ${totalNet >= 0 ? 'positive' : 'negative'}">$${Math.round(totalNet).toLocaleString()}</div>
+    </div>
+    <div class="stat-box" style="border-left-color: #3b82f6">
+      <div class="stat-title">Összes Bruttó Kifizetés</div>
+      <div class="stat-value neutral">$${Math.round(totalGross).toLocaleString()}</div>
+    </div>
+    <div class="stat-box" style="border-left-color: #ef4444">
+      <div class="stat-title">Összes Challenge Kiadás</div>
+      <div class="stat-value negative">$${Math.round(totalSpent).toLocaleString()}</div>
+    </div>
+    <div class="stat-box" style="border-left-color: #f59e0b">
+      <div class="stat-title">Összes Befizetett Adó</div>
+      <div class="stat-value" style="color: #f59e0b">$${Math.round(totalTax).toLocaleString()}</div>
+    </div>
+  `;
+}
+
+function renderTable(history){
+  const tbody = document.querySelector("#table tbody");
+  tbody.innerHTML = "";
+  history.forEach(r => {
+    tbody.innerHTML += `
+    <tr>
+      <td style="text-align:center;"><b>${r.month}. hó</b></td>
+      <td style="text-align:center;">${r.challenges} db</td>
+      <td style="text-align:center;">${r.liveAccounts} db</td>
+      <td class="negative">$${Math.round(r.expense).toLocaleString()}</td>
+      <td class="neutral">$${Math.round(r.grossPayout).toLocaleString()}</td>
+      <td style="color: ${r.netProfit >= 0 ? '#22c55e' : '#ef4444'}"><b>$${Math.round(r.netProfit).toLocaleString()}</b></td>
+      <td style="color: ${r.cumulativeNet >= 0 ? '#22c55e' : '#ef4444'}"><b>$${Math.round(r.cumulativeNet).toLocaleString()}</b></td>
+    </tr>`;
+  });
+}
+
+function drawChart(history){
+  const c = document.getElementById("chart");
+  const ctx = c.getContext("2d");
+
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  if (history.length === 0) return;
+
+  const padLeft = 70;
+  const padRight = 30;
+  const padTop = 30;
+  const padBottom = 40;
+
+  let values = history.map(h => h.cumulativeNet);
+  let max = Math.max(...values, 100);
+  let min = Math.min(...values, 0);
+
+  if (max === min) max += 100;
+
+  function mapX(i){
+    return padLeft + (c.width - padLeft - padRight) * (i / Math.max(1, history.length - 1));
+  }
+
+  function mapY(v){
+    return c.height - padBottom - ((v - min) / (max - min)) * (c.height - padTop - padBottom);
+  }
+
+  // Tengelyek és Rácsvonalak
+  ctx.strokeStyle = "#334155";
+  ctx.lineWidth = 1;
+
+  // X tengely (0 vonal kiemelése)
+  let zeroY = mapY(0);
+  ctx.strokeStyle = "#475569";
+  ctx.beginPath();
+  ctx.moveTo(padLeft, zeroY);
+  ctx.lineTo(c.width - padRight, zeroY);
+  ctx.stroke();
+
+  // Y tengely feliratok
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "11px Arial";
+  ctx.textAlign = "right";
+
+  for(let i = 0; i <= 5; i++){
+    let val = min + (max - min) * (i / 5);
+    let y = c.height - padBottom - (c.height - padTop - padBottom) * (i / 5);
+    ctx.fillText("$" + Math.round(val).toLocaleString(), padLeft - 10, y + 4);
+    
+    ctx.strokeStyle = "#1e293b";
+    ctx.beginPath();
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(c.width - padRight, y);
+    ctx.stroke();
+  }
+
+  // X tengely feliratok (Hónapok)
+  ctx.textAlign = "center";
+  let step = Math.max(1, Math.floor(history.length / 10));
+  for(let i = 0; i < history.length; i += step){
+    let x = mapX(i);
+    ctx.fillText(history[i].month + ". hó", x, c.height - 15);
+  }
+
+  // Görbe megrajzolása
+  ctx.strokeStyle = history[history.length - 1].cumulativeNet >= 0 ? "#22c55e" : "#ef4444";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+
+  history.forEach((h, i) => {
+    let x = mapX(i);
+    let y = mapY(h.cumulativeNet);
+    if(i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+
+  ctx.stroke();
+
+  // Pontok kirajzolása
+  history.forEach((h, i) => {
+    let x = mapX(i);
+    let y = mapY(h.cumulativeNet);
+    ctx.fillStyle = h.cumulativeNet >= 0 ? "#22c55e" : "#ef4444";
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Egér interakció (Hover)
+  c.onmousemove = function(e){
+    const rect = c.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+
+    let ratio = (x - padLeft) / (c.width - padLeft - padRight);
+    let i = Math.round(ratio * (history.length - 1));
+
+    if(i >= 0 && i < history.length){
+      const h = history[i];
+      document.getElementById("hoverInfo").innerHTML =
+        `<b>${h.month}. hónap:</b> Challenge: ${h.challenges} db | Live: ${h.liveAccounts} db | Havi nettó: <span style="color:${h.netProfit>=0?'#22c55e':'#ef4444'}">$${Math.round(h.netProfit).toLocaleString()}</span> | Kummulált: <b>$${Math.round(h.cumulativeNet).toLocaleString()}</b>`;
+    }
+  };
+}
+
+// --- MENTÉSI & BETÖLTÉSI FUNKCIÓK ---
+function exportInputs() {
+  const inputs = {};
+  document.querySelectorAll(".sidebar .input-group input, .sidebar .input-group select").forEach(el => {
+    inputs[el.id] = el.value;
+  });
+  
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(inputs, null, 2));
+  const downloadAnchor = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  
+  downloadAnchor.setAttribute("href", dataStr);
+  downloadAnchor.setAttribute("download", `prop_firm_szimulacio_${date}.json`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+}
+
+function importInputs(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      Object.keys(data).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = data[id];
+      });
+      calculate(); 
+      alert("Prop Firm adatok sikeresen betöltve!");
+    } catch (err) {
+      alert("Hiba történt a fájl feldolgozása közben! Győződj meg róla, hogy helyes JSON export fájlt választottál.");
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; 
+}
+
+// Eseményfigyelők
+document.querySelectorAll("input, select").forEach(el=>{
+  if(el.id !== "fileImporter") {
+    el.addEventListener("input", calculate);
+    el.addEventListener("change", calculate);
+  }
+});
+
+calculate();
+
+</script>
+
+</body>
+</html>
