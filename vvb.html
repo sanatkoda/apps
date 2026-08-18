@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<title>Lakás vs Bérlés kalkulátor</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body { font-family: Arial; padding: 20px; }
+.container { display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
+input { margin: 5px 0; width: 100%; }
+table { border-collapse: collapse; margin-top:20px; font-size: 12px; }
+td, th { border:1px solid #ccc; padding:4px 6px; }
+canvas { background:#fff; border:1px solid #ddd; }
+button { margin-top:10px; }
+.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); }
+.modal-content { background:#fff; padding:20px; max-width:700px; margin:80px auto; border-radius:8px; }
+</style>
+</head>
+<body>
+
+<h2>Lakás vs Bérlés (nettó vagyon – teljes logika)</h2>
+
+<button onclick="openInfo()">Info</button>
+
+<div class="container">
+<div>
+
+<label>Lakás ára (Ft):</label>
+<input id="price" value="40000000" oninput="calc()">
+
+<label>Önerő (Ft):</label>
+<input id="own" value="30000000" oninput="calc()">
+
+<label>Kamat (%):</label>
+<input id="interest" value="6" oninput="calc()">
+
+<label>Futamidő (év):</label>
+<input id="loanYears" value="20" oninput="calc()">
+
+<label>Ingatlan ár növekedés (% / év):</label>
+<input id="growth" value="3" oninput="calc()">
+
+<label>Karbantartás (% / év):</label>
+<input id="maintenance" value="1" oninput="calc()">
+
+<label>Bérleti díj (Ft/hó):</label>
+<input id="rent" value="180000" oninput="calc()">
+
+<label>Befektetési hozam (%):</label>
+<input id="yield" value="7" oninput="calc()">
+
+<label>Időtáv (év):</label>
+<input id="years" value="20" oninput="calc()">
+
+<hr>
+
+<label>Élettartam kockázat kezdete (év):</label>
+<input id="riskStart" value="20" oninput="calc()">
+
+<label>Éves értékcsökkenés (%):</label>
+<input id="riskPercent" value="2" oninput="calc()">
+
+<h3>Havi törlesztő: <span id="monthlyOut"></span></h3>
+
+</div>
+
+<div>
+<canvas id="chart" width="700" height="400"></canvas>
+</div>
+
+</div>
+
+<table id="table"></table>
+
+<div id="infoModal" class="modal" onclick="closeInfo()">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h3>Kalkulátor működése</h3>
+
+    <p><b>Röviden:</b> A kalkulátor a bérlés és a vásárlás esetén kialakuló nettó vagyont hasonlítja össze időben.</p>
+
+    <hr>
+
+    <h4>Részletes magyarázat</h4>
+
+    <p><b>Bérlés oldal:</b></p>
+    <ul>
+      <li>Az önerő befektetésre kerül, és kamatozik.</li>
+      <li>Minden hónapban levonásra kerül a bérleti díj.</li>
+      <li>A hitel törlesztőrészlete (amit nem kell fizetni) hozzáadódik a befektetéshez, DE csak a futamidő alatt.</li>
+      <li>A karbantartási költség (amit bérlőként nem fizetsz) szintén növeli a befektetést.</li>
+    </ul>
+
+    <p><b>Vásárlás oldal:</b></p>
+    <ul>
+      <li>A lakás értéke évente növekszik a megadott százalékkal.</li>
+      <li>Levontuk a még hátralévő teljes hitel visszafizetést.</li>
+      <li>Így kapjuk meg a nettó vagyont.</li>
+    </ul>
+
+    <p><b>Élettartam kockázat:</b></p>
+    <ul>
+      <li>Adott évtől kezdve a lakás értéke évente csökken.</li>
+      <li>Ez a „bizalomvesztést” modellezi.</li>
+    </ul>
+
+    <p><b>Mit mutat a grafikon?</b></p>
+    <ul>
+      <li>Kék: bérlés esetén felhalmozott vagyon</li>
+      <li>Piros: vásárlás esetén nettó vagyon</li>
+    </ul>
+
+    <button onclick="closeInfo()">Bezár</button>
+  </div>
+</div>
+
+<script>
+let chart;
+
+function openInfo(){ document.getElementById('infoModal').style.display='block'; }
+function closeInfo(){ document.getElementById('infoModal').style.display='none'; }
+
+function calc(){
+  let price = +priceEl.value;
+  let own = +ownEl.value;
+  let loan = price - own;
+
+  let growthRate = +growthEl.value/100;
+  let maintenanceRate = +maintenanceEl.value/100;
+
+  let annualInterest = +interestEl.value/100;
+  let monthlyInterest = annualInterest/12;
+  let loanYears = +loanYearsEl.value;
+  let totalMonths = loanYears * 12;
+
+  let rent = +rentEl.value;
+  let yieldRate = +yieldEl.value/100;
+  let years = +yearsEl.value;
+
+  let riskStart = +riskStartEl.value;
+  let riskPercent = +riskPercentEl.value/100;
+
+  let monthlyPayment = loan>0 ? loan * (monthlyInterest*Math.pow(1+monthlyInterest,totalMonths))/(Math.pow(1+monthlyInterest,totalMonths)-1) : 0;
+  monthlyOut.innerText = Math.round(monthlyPayment).toLocaleString()+" Ft";
+
+  let rentWealth = own;
+  let currentPrice = price;
+
+  let labels=[], rentData=[], buyData=[];
+
+  let html = `<tr>
+<th>Év</th>
+<th>Bérlés vagyon</th>
+<th>+hozam</th>
+<th>Bérleti díj</th>
+<th>Törlesztő (megtakarítva)</th>
+<th>+karbant.</th>
+<th>Vásárlás vagyon</th>
+<th>ingatlan ár</th>
+<th>hátralévő fizetés</th>
+</tr>`;
+
+  for(let i=1;i<=years;i++){
+    labels.push(i);
+
+    let yearlyGain=0, rentPaid=0, paymentSaved=0;
+
+    for(let m=0;m<12;m++){
+      let globalMonth = (i-1)*12 + m;
+
+      let before = rentWealth;
+      rentWealth *= (1 + yieldRate/12);
+      yearlyGain += rentWealth-before;
+
+      rentWealth -= rent;
+      rentPaid += rent;
+
+      if(globalMonth < totalMonths){
+        rentWealth += monthlyPayment;
+        paymentSaved += monthlyPayment;
+      }
+    }
+
+    let maintenanceCost = currentPrice * maintenanceRate;
+    rentWealth += maintenanceCost;
+
+    currentPrice *= (1 + growthRate);
+
+    let monthsPassed = Math.min(i*12, totalMonths);
+    let monthsRemaining = totalMonths - monthsPassed;
+    let remainingTotalPayment = monthsRemaining * monthlyPayment;
+
+    let buyWealth = currentPrice - remainingTotalPayment;
+
+    if(i>=riskStart){
+      let factor = 1 - (riskPercent*(i-riskStart+1));
+      if(factor<0) factor=0;
+      buyWealth *= factor;
+    }
+
+    rentData.push(rentWealth);
+    buyData.push(buyWealth);
+
+    html += `<tr>
+<td>${i}</td>
+<td>${Math.round(rentWealth).toLocaleString()}</td>
+<td>${Math.round(yearlyGain).toLocaleString()}</td>
+<td>${Math.round(rentPaid).toLocaleString()}</td>
+<td>${Math.round(paymentSaved).toLocaleString()}</td>
+<td>${Math.round(maintenanceCost).toLocaleString()}</td>
+<td>${Math.round(buyWealth).toLocaleString()}</td>
+<td>${Math.round(currentPrice).toLocaleString()}</td>
+<td>${Math.round(remainingTotalPayment).toLocaleString()}</td>
+</tr>`;
+  }
+
+  table.innerHTML = html;
+
+  if(chart) chart.destroy();
+  chart = new Chart(chartEl, {
+    type:'line',
+    data:{ labels, datasets:[
+      {label:'Bérlés', data:rentData},
+      {label:'Vásárlás', data:buyData}
+    ]}
+  });
+}
+
+const priceEl=price, ownEl=own, interestEl=interest, loanYearsEl=loanYears,
+      growthEl=growth, maintenanceEl=maintenance, rentEl=rent,
+      yieldEl=yield, yearsEl=years, riskStartEl=riskStart, riskPercentEl=riskPercent,
+      monthlyOut=document.getElementById('monthlyOut'),
+      chartEl=document.getElementById('chart'), table=document.getElementById('table');
+
+calc();
+</script>
+
+</body>
+</html>
