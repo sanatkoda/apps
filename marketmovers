@@ -1,0 +1,9 @@
+<script type="module" src="https://widgets.tradingview-widget.com/w/en/tv-market-overview.js"></script>
+
+<tv-market-overview mode="market-movers"></tv-market-overview>
+
+
+
+<script type="module" src="https://widgets.tradingview-widget.com/w/en/tv-market-overview.js"></script>
+
+<tv-market-overview symbol-sectors='[{"sectionName":"Indices","symbols":["FOREXCOM:SPXUSD","FOREXCOM:NSXUSD","FOREXCOM:DJI","FOREXCOM:UKXGBP"]},{"sectionName":"Stocks","symbols":["NASDAQ:AAPL","NASDAQ:ADBE","NASDAQ:NVDA","NASDAQ:TSLA"]},{"sectionName":"Crypto","symbols":["BITSTAMP:BTCUSD","BITSTAMP:ETHUSD","CRYPTO:XRPUSD"]},{"sectionName":"Forex","symbols":["OANDA:EURUSD","OANDA:GBPUSD","FX:USDJPY","OKX:XAUUSDUSD28Q2026"]},{"sectionName":"Bonds","symbols":["TVC:US10Y","TVC:JP10Y","TVC:DE10Y","TVC:GB10Y","TVC:AU10Y","TVC:CA10Y","TVC:CH10Y"]}]' time-frame="1D"></tv-market-overview>
