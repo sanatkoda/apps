@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projekt Navigáció & Eszközök</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --card-hover: #334155;
+            --accent-color: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            max-width: 600px;
+            margin-bottom: 2.5rem;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+            letter-spacing: -0.025em;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .search-container {
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 2rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.85rem 1.25rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.85rem;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            background-color: var(--card-hover);
+            border-color: var(--accent-color);
+            box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+            background: rgba(56, 189, 248, 0.1);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .card-description {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            margin-bottom: 1.25rem;
+        }
+
+        .card-action {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .card-action span {
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover .card-action span {
+            transform: translateX(4px);
+        }
+
+        footer {
+            margin-top: auto;
+            padding-top: 3rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        /* Szűrés visszajelzés ha nincs találat */
+        .no-results {
+            display: none;
+            grid-column: 1 / -1;
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Sanátana dás alkalmazásai</h1>
+        <p>Válassz az alábbi modulok és webes alkalmazások közül a megnyitáshoz.</p>
+    </header>
+
+    <div class="search-container">
+        <input type="text" id="searchInput" class="search-input" placeholder="Keresés az oldalak és eszközök között..." onkeyup="filterCards()">
+    </div>
+
+    <main class="grid-container" id="cardGrid">
+        
+        <!-- 1. Kártya -->
+        <a href="fire.html" class="card">
+            <div>
+                <div class="card-header">
+                    <span class="card-icon">⚡</span>
+                    <h2 class="card-title">FIRE</h2>
+                </div>
+                <p class="card-description">Korai nyugdíjba vonulás kalkulátor, megtakarítási tervek nyugdíjas korig, és után</p>
+            </div>
+            <div class="card-action">Megnyitás <span>&rarr;</span></div>
+        </a>
+
+        <!-- 2. Kártya -->
+        <a href="fajlneve2.html" class="card">
+            <div>
+                <div class="card-header">
+                    <span class="card-icon">📊</span>
+                    <h2 class="card-title">Elemző Eszköz</h2>
+                </div>
+                <p class="card-description">Adatok megjelenítése, statisztikák és diagramok megtekintése.</p>
+            </div>
+            <div class="card-action">Megnyitás <span>&rarr;</span></div>
+        </a>
+
+        <!-- 3. Kártya -->
+        <a href="fajlneve3.html" class="card">
+            <div>
+                <div class="card-header">
+                    <span class="card-icon">📝</span>
+                    <h2 class="card-title">Szöveges Modul</h2>
+                </div>
+                <p class="card-description">Jegyzetek, szövegfeldolgozási és formázási funkciók.</p>
+            </div>
+            <div class="card-action">Megnyitás <span>&rarr;</span></div>
+        </a>
+
+        <!-- 4. Kártya -->
+        <a href="fajlneve4.html" class="card">
+            <div>
+                <div class="card-header">
+                    <span class="card-icon">⚙️</span>
+                    <h2 class="card-title">Beállítások</h2>
+                </div>
+                <p class="card-description">Konfigurációs opciók és egyéb segédprogramok.</p>
+            </div>
+            <div class="card-action">Megnyitás <span>&rarr;</span></div>
+        </a>
+
+        <div id="noResults" class="no-results">Nincs a keresésnek megfelelő oldal.</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Dashboard - Minden jog fenntartva.</p>
+    </footer>
+
+    <script>
+        function filterCards() {
+            const input = document.getElementById('searchInput');
+            const filter = input.value.toLowerCase();
+            const grid = document.getElementById('cardGrid');
+            const cards = grid.getElementsByClassName('card');
+            let visibleCount = 0;
+
+            for (let i = 0; i < cards.length; i++) {
+                const title = cards[i].querySelector('.card-title').textContent.toLowerCase();
+                const desc = cards[i].querySelector('.card-description').textContent.toLowerCase();
+                if (title.indexOf(filter) > -1 || desc.indexOf(filter) > -1) {
+                    cards[i].style.display = "";
+                    visibleCount++;
+                } else {
+                    cards[i].style.display = "none";
+                }
+            }
+
+            const noResults = document.getElementById('noResults');
+            if (visibleCount === 0) {
+                noResults.style.display = "block";
+            } else {
+                noResults.style.display = "none";
+            }
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<title>FIRE Monte Carlo PRO</title>
+
+<style>
+body { margin:0; font-family:Arial; background:#0f172a; color:white;}
+.container { display:grid; grid-template-columns:360px 1fr; height:100vh;}
+.sidebar { padding:20px; border-right:1px solid #333; overflow:auto;}
+.main { padding:20px; overflow:auto;}
+input, select { width:100%; padding:8px; margin-top:4px; background:#111; border:1px solid #333; color:white; box-sizing: border-box;}
+.input-group { margin-bottom:12px;}
+.card { background:#111827; padding:15px; border-radius:12px; margin-bottom:15px;}
+canvas { background:#000;}
+table { width:100%; border-collapse: collapse; font-size:12px;}
+th, td { border:1px solid #333; padding:5px; text-align:right;}
+th { background:#1e293b;}
+
+/* Gombok stílusa */
+.storage-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 15px;
+}
+.btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  color: white;
+  font-size: 13px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.btn-save { background: #3b82f6; }
+.btn-save:hover { background: #2563eb; }
+.btn-load { background: #10b981; }
+.btn-load:hover { background: #059669; }
+.file-wrapper { position: relative; flex: 1; overflow: hidden; }
+.file-wrapper input[type="file"] {
+  position: absolute;
+  left: 0; top: 0; opacity: 0;
+  cursor: pointer; height: 100%; width: 100%;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="sidebar">
+
+<div class="storage-actions">
+  <button class="btn btn-save" onclick="exportInputs()">💾 Mentés</button>
+  <div class="file-wrapper">
+    <button class="btn btn-load">📂 Betöltés</button>
+    <input type="file" id="fileImporter" accept=".json" onchange="importInputs(event)">
+  </div>
+</div>
+
+<div class="input-group"><label>Életkor</label><input id="age" value="52"></div>
+<div class="input-group"><label>Havi kiadás</label><input id="expenses" value="300000"></div>
+
+<div class="input-group"><label>Aktív havi bevétel</label><input id="activeIncome" value="500000"></div>
+<div class="input-group"><label>Aktív évek</label><input id="activeYears" value="10"></div>
+
+<div class="input-group"><label>Barista havi bevétel</label><input id="baristaIncome" value="200000"></div>
+<div class="input-group"><label>Barista évek</label><input id="baristaYears" value="10"></div>
+
+<div class="input-group"><label>Életkor nyugdíjba vonuláskor</label><input id="retirementAge" value="65"></div>
+<div class="input-group"><label>Nyugdíj (havi)</label><input id="pension" value="225000"></div>
+
+<hr style="border:0; border-top:1px solid #333; margin:20px 0;">
+
+<div class="input-group"><label>Megtakarítás</label><input id="savings" value="30000000"></div>
+<div class="input-group"><label>Megtakarítás átlag éves hozam (%)</label><input id="return" value="5"></div>
+
+<div class="input-group"><label>Kereskedési tőke</label><input id="tradingCapital" value="10000000"></div>
+<div class="input-group"><label>Kereskedés átlag éves hozam (%)</label><input id="tradingReturn" value="15"></div>
+
+<div class="input-group">
+  <label>Éves többlet befektetése ide</label>
+  <select id="investmentTarget">
+    <option value="savings">Megtakarítás</option>
+    <option value="trading">Kereskedési tőke</option>
+  </select>
+</div>
+
+<div class="input-group"><label>Szórás (%)</label><input id="volatility" value="10"></div>
+<div class="input-group"><label>Monte Carlo futások</label><input id="runs" value="100"></div>
+<div class="input-group"><label>Szimuláció vége (életkor)</label><input id="maxSimAge" value="100"></div>
+
+</div>
+
+<div class="main">
+
+<div class="card" id="status"></div>
+
+<div class="card">
+<canvas id="chart" width="900" height="400"></canvas>
+</div>
+
+<div class="card">
+<table id="table">
+<thead>
+<tr>
+<th>Életkor</th>
+<th>Összvagyon</th>
+<th>Megtakarítás</th>
+<th>Kereskedési tőke</th>
+<th>Cashflow</th>
+<th>Hozam (Összes)</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+function num(id){ return parseFloat(document.getElementById(id).value) || 0; }
+
+let lastData = [];
+let lastAges = [];
+
+function randn(){
+  let u = Math.random(), v = Math.random();
+  let z = Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  return Math.max(Math.min(z,2),-2);
+}
+
+function simulate(random=false){
+
+  let savingsPortfolio = num("savings");
+  let tradingPortfolio = num("tradingCapital");
+
+  const age = num("age");
+  const retirementAge = num("retirementAge");
+  const maxSimAge = num("maxSimAge");
+
+  const expenses = num("expenses")*12;
+  const activeIncome = num("activeIncome")*12;
+  const baristaIncome = num("baristaIncome")*12;
+  const pension = num("pension")*12;
+
+  const avgSavings = num("return")/100;
+  const avgTrading = num("tradingReturn")/100;
+  const vol = num("volatility")/100;
+
+  const activeYears = num("activeYears");
+  const baristaYears = num("baristaYears");
+  const investmentTarget = document.getElementById("investmentTarget").value;
+
+  // Dinamikus évek száma a megadott max életkor alapján
+  const maxYears = Math.max(0, maxSimAge - age);
+
+  let minTotal = savingsPortfolio + tradingPortfolio;
+  const arr = [];
+  const rows = [];
+
+  for(let i=0;i<=maxYears;i++){
+
+    const currentAge = age + i;
+
+    let income = 0;
+
+    if(i < activeYears) income += activeIncome;
+    if(i >= activeYears && i < activeYears + baristaYears) income += baristaIncome;
+    if(currentAge >= retirementAge) income += pension;
+
+    let rSavings = avgSavings;
+    let rTrading = avgTrading;
+    
+    if(random) {
+      let noise = randn() * vol;
+      rSavings = avgSavings + noise;
+      rTrading = avgTrading + noise;
+    }
+
+    const growthSavings = savingsPortfolio * rSavings;
+    const growthTrading = tradingPortfolio * rTrading;
+    const totalGrowth = growthSavings + growthTrading;
+
+    const cash = income - expenses;
+
+    // Éves elszámolási logika
+    if (cash >= 0) {
+      if (investmentTarget === "savings") {
+        savingsPortfolio += growthSavings + cash;
+        tradingPortfolio += growthTrading;
+      } else {
+        savingsPortfolio += growthSavings;
+        tradingPortfolio += growthTrading + cash;
+      }
+    } else {
+      // Negatív cashflow esetén kötelezően először a Megtakarításból vonunk le
+      if (savingsPortfolio + growthSavings + cash >= 0) {
+        savingsPortfolio += growthSavings + cash;
+        tradingPortfolio += growthTrading;
+      } else {
+        // Ha a Megtakarítás+Hozam sem fedezi a hiányt, nullázzuk, és a maradék hiány megy a Kereskedési tőkére
+        let remainingDeficit = cash + (savingsPortfolio + growthSavings);
+        savingsPortfolio = 0; 
+        tradingPortfolio = Math.max(0, tradingPortfolio + growthTrading + remainingDeficit);
+      }
+    }
+
+    let totalPortfolio = savingsPortfolio + tradingPortfolio;
+
+    if(totalPortfolio < minTotal) minTotal = totalPortfolio;
+
+    arr.push(totalPortfolio);
+
+    rows.push({
+      age: currentAge,
+      portfolio: totalPortfolio,
+      savings: savingsPortfolio,
+      trading: tradingPortfolio,
+      cash,
+      growth: totalGrowth
+    });
+  }
+
+  return {arr, rows, min: minTotal};
+}
+
+function calculate(){
+
+  const base = simulate(false);
+  const runs = num("runs");
+
+  let sims = [];
+  let success = 0;
+
+  for(let i=0;i<runs;i++){
+    let s = simulate(true);
+    sims.push(s);
+    if(s.min >= 0) success++;
+  }
+
+  const probability = Math.round((success / runs) * 100);
+
+  lastData = base.arr;
+  lastAges = base.rows.map(r=>r.age);
+
+  draw(base.arr, sims);
+  renderTable(base.rows);
+
+  document.getElementById("status").innerHTML =
+    "Végső összvagyon: " + Math.round(base.arr.at(-1)).toLocaleString() + " Ft" +
+    "<br>🎲 Siker esély: <b>" + probability + "%</b>" +
+    "<br><span id='hoverInfo'></span>";
+}
+
+function renderTable(rows){
+  const tbody = document.querySelector("#table tbody");
+  tbody.innerHTML="";
+  rows.forEach(r=>{
+    tbody.innerHTML+=`
+    <tr>
+      <td>${r.age}</td>
+      <td><b>${Math.round(r.portfolio).toLocaleString()} Ft</b></td>
+      <td>${Math.round(r.savings).toLocaleString()} Ft</td>
+      <td>${Math.round(r.trading).toLocaleString()} Ft</td>
+      <td style="color: ${r.cash >= 0 ? '#22c55e' : '#ef4444'}">${Math.round(r.cash).toLocaleString()} Ft</td>
+      <td>${Math.round(r.growth).toLocaleString()} Ft</td>
+    </tr>`;
+  });
+}
+
+function draw(main, sims){
+
+  const c = document.getElementById("chart");
+  const ctx = c.getContext("2d");
+
+  ctx.clearRect(0,0,c.width,c.height);
+
+  const pad = 70;
+
+  if (main.length === 0) return;
+
+  let all = [...main, ...sims.flatMap(s=>s.arr)];
+  let max = Math.max(...all);
+  let min = Math.min(...all);
+
+  if(max === min) max++;
+
+  function map(i, v){
+    let x = pad + (c.width-2*pad)*(i/Math.max(1, main.length-1));
+    let y = c.height-pad - ((v-min)/(max-min))*(c.height-2*pad);
+    return [x,y];
+  }
+
+  // tengelyek
+  ctx.strokeStyle="#888";
+
+  ctx.beginPath();
+  ctx.moveTo(pad,c.height-pad);
+  ctx.lineTo(c.width-pad,c.height-pad);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(pad,pad);
+  ctx.lineTo(pad,c.height-pad);
+  ctx.stroke();
+
+  ctx.fillStyle="white";
+  ctx.font="12px Arial";
+
+  // Y tengely
+  for(let i=0;i<=5;i++){
+    let val = max - (max-min)*(i/5);
+    let y = pad + (c.height-2*pad)*(i/5);
+    ctx.fillText(Math.round(val/1000000)+"M", 5, y);
+  }
+
+  // X tengely
+  let step = Math.max(1, Math.floor(main.length/6));
+  for(let i=0;i<main.length;i+=step){
+    let [x,y] = map(i, main[i]);
+    ctx.fillText(lastAges[i], x-10, c.height-10);
+  }
+
+  // Monte Carlo szálak
+  ctx.strokeStyle="rgba(255,255,255,0.14)";
+  sims.forEach(s=>{
+    ctx.beginPath();
+    s.arr.forEach((v,i)=>{
+      let [x,y]=map(i,v);
+      if(i===0) ctx.moveTo(x,y);
+      else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  });
+
+  // Fő alapvonal görbe
+  ctx.strokeStyle="#22c55e";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+
+  main.forEach((v,i)=>{
+    let [x,y] = map(i,v);
+    if(i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+
+  ctx.stroke();
+
+  // Hover/Egérmozgás követés
+  c.onmousemove = function(e){
+    const rect = c.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+
+    let ratio = (x - pad) / (c.width - 2*pad);
+    let i = Math.round(ratio * (main.length-1));
+
+    if(i>=0 && i<main.length){
+      document.getElementById("hoverInfo").innerHTML =
+        "<br>👉 " + lastAges[i] + " év | " +
+        Math.round(main[i]).toLocaleString() + " Ft";
+    }
+  };
+}
+
+// --- MENTÉSI FUNKCIÓK ---
+function exportInputs() {
+  const inputs = {};
+  document.querySelectorAll(".sidebar .input-group input, .sidebar .input-group select").forEach(el => {
+    inputs[el.id] = el.value;
+  });
+  
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(inputs, null, 2));
+  const downloadAnchor = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  
+  downloadAnchor.setAttribute("href", dataStr);
+  downloadAnchor.setAttribute("download", `fire_szimulacio_${date}.json`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+}
+
+function importInputs(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      Object.keys(data).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = data[id];
+      });
+      calculate(); 
+      alert("Szimulációs adatok sikeresen betöltve!");
+    } catch (err) {
+      alert("Hiba történt a fájl feldolgozása közben! Győződj meg róla, hogy helyes FIRE export fájlt választottál.");
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; 
+}
+
+// Eseményfigyelők az automatikus újraszámoláshoz
+document.querySelectorAll("input, select").forEach(el=>{
+  if(el.id !== "fileImporter") {
+    el.addEventListener("input", calculate);
+    el.addEventListener("change", calculate);
+  }
+});
+
+calculate();
+
+</script>
+
+</body>
+</html>
