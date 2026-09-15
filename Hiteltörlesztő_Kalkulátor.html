@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hiteltörlesztő s Inflációs Kalkulátor</title>
+    <!-- Chart.js beágyazása a grafikonokhoz -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #1e3a8a;
+            --primary-hover: #1d4ed8;
+            --secondary-color: #0f172a;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #334155;
+            --border-color: #e2e8f0;
+            --accent-color: #10b981;
+            --chart-line-color: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: #64748b;
+        }
+
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        @media (min-width: 768px) {
+            .calculator-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+
+        .card h2 {
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+
+        .input-addon {
+            position: absolute;
+            right: 12px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .result-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+        }
+
+        .result-value.highlight {
+            color: var(--accent-color);
+            font-size: 1.6rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .schedule-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            margin-top: 15px;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+        
+        .inflation-section {
+            background-color: #fef2f2;
+            border: 1px solid #fee2e2;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Hiteltörlesztő & Inflációs Kalkulátor</h1>
+        <p>Elemezze a futamidők hatását és nézze meg, hogyan inflálódik el a törlesztőrészlete az évek során!</p>
+    </header>
+
+    <div class="calculator-grid">
+        <!-- Input Card -->
+        <div class="card">
+            <h2>Hitel alapadatai</h2>
+            <div class="input-group">
+                <label for="loanAmount">Hitelösszeg</label>
+                <div class="input-wrapper">
+                    <input type="number" id="loanAmount" value="5000000" min="100000" step="50000" oninput="calculateLoan()">
+                    <span class="input-addon">Ft</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="interestRate">Éves kamatláb</label>
+                <div class="input-wrapper">
+                    <input type="number" id="interestRate" value="7.5" min="0.1" step="0.1" oninput="calculateLoan()">
+                    <span class="input-addon">%</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="loanTerm">Kiválasztott futamidő</label>
+                <div class="input-wrapper">
+                    <input type="number" id="loanTerm" value="10" min="1" max="25" step="1" oninput="calculateLoan()">
+                    <span class="input-addon">év</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Card -->
+        <div class="card">
+            <h2>Összegzés (Kiválasztott futamidőre)</h2>
+            <div class="result-item">
+                <span class="result-label">Havi törlesztőrészlet (Névleges):</span>
+                <span class="result-value highlight" id="monthlyPayment">- Ft</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Teljes visszafizetendő összeg:</span>
+                <span class="result-value" id="totalRepayment">- Ft</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Teljes kifizetett kamat:</span>
+                <span class="result-value" id="totalInterest">- Ft</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Futamidő hónapokban:</span>
+                <span class="result-value" id="totalMonths">- hó</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 1: Term vs Monthly Payment -->
+    <div class="card">
+        <h2>Havi törlesztőrészlet alakulása a futamidő függvényében (1 - 25 év)</h2>
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Ez a grafikon megmutatja, mekkora lenne a havi törlesztőrészlete, ha ugyanezt a hitelt rövidebb vagy hosszabb futamidőre venné fel.</p>
+        <div class="chart-container">
+            <canvas id="termChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Inflation Input & Chart 2 -->
+    <div class="card inflation-section">
+        <h2>Inflációs hatás elemzése</h2>
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 15px;">A fix törlesztőrészlet névlegesen nem változik, de az infláció miatt a reálértéke (vásárlóereje) folyamatosan csökken. Adja meg a tervezett inflációt!</p>
+        
+        <div class="input-group" style="max-width: 300px;">
+            <label for="inflationRate">Tervezett éves átlagos infláció</label>
+            <div class="input-wrapper">
+                <input type="number" id="inflationRate" value="4.0" min="0" max="50" step="0.1" oninput="calculateLoan()">
+                <span class="input-addon">%</span>
+            </div>
+        </div>
+
+        <h3>A havi törlesztőrészlet reálértéke (mai értéken kifejezve) az évek során</h3>
+        <div class="chart-container">
+            <canvas id="inflationChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Amortization Schedule -->
+    <div class="card schedule-container">
+        <h2>Részletes törlesztési ütemterv (A kiválasztott futamidő 1. éve)</h2>
+        <table id="amortizationTable">
+            <thead>
+                <tr>
+                    <th>Hónap</th>
+                    <th class="text-right">Törlesztőrészlet</th>
+                    <th class="text-right">Tőketartalom</th>
+                    <th class="text-right">Kamatmaradvány</th>
+                    <th class="text-right">Fennmaradó tőke</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- Dinamikusan generált tartalom -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Globális változók a grafikon példányok tárolására (frissítéshez törölni kell őket)
+    let termChartInstance = null;
+    let inflationChartInstance = null;
+
+    function formatCurrency(amount) {
+        return Math.round(amount).toLocaleString('hu-HU') + ' Ft';
+    }
+
+    function calculateLoan() {
+        const principal = parseFloat(document.getElementById('loanAmount').value);
+        const annualInterest = parseFloat(document.getElementById('interestRate').value);
+        const selectedYears = parseFloat(document.getElementById('loanTerm').value);
+        const inflationRate = parseFloat(document.getElementById('inflationRate').value) / 100;
+
+        if (isNaN(principal) || isNaN(annualInterest) || isNaN(selectedYears) || principal <= 0 || annualInterest <= 0 || selectedYears <= 0) {
+            return; // Hiányos vagy hibás adatok esetén nem számol tovább
+        }
+
+        // --- 1. Alapszámítások a kiválasztott futamidőre ---
+        const monthlyInterest = (annualInterest / 100) / 12;
+        const numberOfPayments = selectedYears * 12;
+        const xSelected = Math.pow(1 + monthlyInterest, numberOfPayments);
+        const selectedMonthlyPayment = (principal * xSelected * monthlyInterest) / (xSelected - 1);
+
+        const totalRepayment = selectedMonthlyPayment * numberOfPayments;
+        const totalInterest = totalRepayment - principal;
+
+        // Értékek kiírása
+        document.getElementById('monthlyPayment').innerText = formatCurrency(selectedMonthlyPayment);
+        document.getElementById('totalRepayment').innerText = formatCurrency(totalRepayment);
+        document.getElementById('totalInterest').innerText = formatCurrency(totalInterest);
+        document.getElementById('totalMonths').innerText = numberOfPayments + ' hó';
+
+        // --- 2. GRAFIKON 1: Törlesztőrészlet az évek függvényében (1-25 év) ---
+        const termsLabels = [];
+        const termPaymentsData = [];
+
+        for (let y = 1; y <= 25; y++) {
+            termsLabels.push(y + " év");
+            const n = y * 12;
+            const x = Math.pow(1 + monthlyInterest, n);
+            const mPayment = (principal * x * monthlyInterest) / (x - 1);
+            termPaymentsData.push(Math.round(mPayment));
+        }
+
+        if (termChartInstance) {
+            termChartInstance.destroy();
+        }
+
+        const ctx1 = document.getElementById('termChart').getContext('2d');
+        termChartInstance = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: termsLabels,
+                datasets: [{
+                    label: 'Havi törlesztőrészlet (Ft)',
+                    data: termPaymentsData,
+                    backgroundColor: 'rgba(30, 58, 138, 0.7)',
+                    borderColor: 'rgba(30, 58, 138, 1)',
+                    borderWidth: 1,
+                    hoverBackgroundColor: 'rgba(29, 78, 216, 0.9)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) { return value.toLocaleString('hu-HU') + ' Ft'; }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) { return context.dataset.label + ': ' + context.raw.toLocaleString('hu-HU') + ' Ft'; }
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- 3. GRAFIKON 2: Inflációs elértéktelenedés (1-25 év reálérték) ---
+        const inflationLabels = [];
+        const realPaymentsData = [];
+
+        for (let y = 1; y <= 25; y++) {
+            inflationLabels.push(y + ". év");
+            
+            // Ha az adott év túlmutat a kiválasztott futamidőn, a fizetendő összeg 0 Ft (mivel lejárt a hitel)
+            if (y <= selectedYears) {
+                // Elinflált érték kiszámítása: Mai érték = Névleges érték / (1 + infláció)^év
+                const realValue = selectedMonthlyPayment / Math.pow(1 + inflationRate, y);
+                realPaymentsData.push(Math.round(realValue));
+            } else {
+                realPaymentsData.push(0); // A hitel már vissza lett fizetve
+            }
+        }
+
+        if (inflationChartInstance) {
+            inflationChartInstance.destroy();
+        }
+
+        const ctx2 = document.getElementById('inflationChart').getContext('2d');
+        inflationChartInstance = new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: inflationLabels,
+                datasets: [{
+                    label: 'Törlesztőrészlet mai értéke (Ft-ban kifejezve)',
+                    data: realPaymentsData,
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.2,
+                    pointBackgroundColor: 'rgba(239, 68, 68, 1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) { return value.toLocaleString('hu-HU') + ' Ft'; }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) { return context.dataset.label + ': ' + context.raw.toLocaleString('hu-HU') + ' Ft'; }
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- 4. Törlesztési ütemterv (Első év / 12 hónap) ---
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = '';
+
+        let remainingBalance = principal;
+        const displayMonths = Math.min(12, numberOfPayments);
+
+        for (let i = 1; i <= numberOfPayments; i++) {
+            const interestPayment = remainingBalance * monthlyInterest;
+            const principalPayment = selectedMonthlyPayment - interestPayment;
+            remainingBalance -= principalPayment;
+
+            if (i <= displayMonths) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${i}. hónap</td>
+                    <td class="text-right">${formatCurrency(selectedMonthlyPayment)}</td>
+                    <td class="text-right">${formatCurrency(principalPayment)}</td>
+                    <td class="text-right">${formatCurrency(interestPayment)}</td>
+                    <td class="text-right">${formatCurrency(Math.max(0, remainingBalance))}</td>
+                `;
+                tableBody.appendChild(row);
+            }
+        }
+    }
+
+    // Automatikus kalkuláció az oldal betöltésekor
+    window.onload = function() {
+        calculateLoan();
+    };
+</script>
+
+</body>
+</html>
