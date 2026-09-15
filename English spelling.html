@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Angol Fonetikus Betűzés Gyakorló</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --background: #f5f7fa;
+            --text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+
+        .word-box {
+            font-size: 2.2rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+            min-height: 45px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.2rem;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #357abd;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            display: none;
+            line-height: 1.5;
+        }
+
+        .correct {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .score-board {
+            margin-top: 25px;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-around;
+            border-top: 2px solid #eee;
+            padding-top: 15px;
+        }
+
+        .score { color: var(--success); font-weight: bold; }
+        .wrong { color: var(--danger); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Spell It Out! 🇬🇧</h1>
+    <div class="subtitle">
+        Írd be a szó kiejtés szerinti betűzését kötőjelekkel elválasztva!<br>
+        <strong>Például:</strong> music -> <code>em-jú-esz-áj-szí</code>
+    </div>
+
+    <div class="word-box" id="word-to-spell">------</div>
+
+    <input type="text" id="user-input" placeholder="Ide írd a kiejtett betűzést..." autocomplete="off">
+    <button id="action-btn" onclick="checkAnswer()">Ellenőrzés</button>
+
+    <div id="result-message" class="result"></div>
+
+    <div class="score-board">
+        <div>Helyes: <span id="score-correct" class="score">0</span></div>
+        <div>Helytelen: <span id="score-wrong" class="wrong">0</span></div>
+    </div>
+</div>
+
+<script>
+    // Szólista a magyarosított kiejtési mintákkal
+    const wordList = [
+        { word: "music", spelling: "em-jú-esz-áj-szí" },
+        { word: "apple", spelling: "éj-pí-pí-el-í" },
+        { word: "cat", spelling: "szí-éj-tí" },
+        { word: "dog", spelling: "dí-ó-dzsí" },
+        { word: "english", spelling: "í-en-dzsí-el-áj-esz-éjcs" },
+        { word: "book", spelling: "bí-ó-ó-ké" },
+        { word: "water", spelling: "dablju-éj-tí-í-ár" },
+        { word: "hello", spelling: "éjcs-í-el-el-ó" },
+        { word: "name", spelling: "en-éj-em-í" },
+        { word: "blue", spelling: "bí-el-jú-í" },
+        { word: "happy", spelling: "éjcs-éj-pí-pí-váj" },
+        { word: "tea", spelling: "tí-í-éj" },
+        { word: "coffee", spelling: "szí-ó-ef-ef-í-í" },
+        { word: "phone", spelling: "pí-éjcs-ó-en-í" },
+        { word: "car", spelling: "szí-éj-ár" }
+    ];
+
+    let currentItem = null;
+    let isCheckingState = true;
+    let correctCount = 0;
+    let wrongCount = 0;
+
+    const wordBox = document.getElementById("word-to-spell");
+    const userInput = document.getElementById("user-input");
+    const actionBtn = document.getElementById("action-btn");
+    const resultMessage = document.getElementById("result-message");
+    const scoreCorrect = document.getElementById("score-correct");
+    const scoreWrong = document.getElementById("score-wrong");
+
+    function generateNewWord() {
+        const randomIndex = Math.floor(Math.random() * wordList.length);
+        currentItem = wordList[randomIndex];
+        
+        wordBox.innerText = currentItem.word.toUpperCase();
+        userInput.value = "";
+        userInput.disabled = false;
+        userInput.focus();
+        resultMessage.style.display = "none";
+        actionBtn.innerText = "Ellenőrzés";
+        isCheckingState = true;
+    }
+
+    function checkAnswer() {
+        if (!isCheckingState) {
+            generateNewWord();
+            return;
+        }
+
+        // Kisbetűssé alakítjuk és leszedjük a felesleges szóközöket
+        const userAnswer = userInput.value.trim().toLowerCase();
+        const correctAnswer = currentItem.spelling.toLowerCase();
+
+        resultMessage.style.display = "block";
+
+        if (userAnswer === correctAnswer) {
+            resultMessage.innerText = "Zseniális! Tökéletes kiejtés! 🎉";
+            resultMessage.className = "result correct";
+            correctCount++;
+            scoreCorrect.innerText = correctCount;
+        } else {
+            resultMessage.innerHTML = `Sajnos nem jó. ❌<br>A helyes kiejtés szerinti betűzés:<br><strong>${correctAnswer}</strong>`;
+            resultMessage.className = "result incorrect";
+            wrongCount++;
+            scoreWrong.innerText = wrongCount;
+        }
+
+        userInput.disabled = true;
+        actionBtn.innerText = "Következő szó";
+        isCheckingState = false;
+    }
+
+    // Enter billentyű figyelése
+    userInput.addEventListener("keyup", function(event) {
+        if (event.key === "Enter") {
+            checkAnswer();
+        }
+    });
+
+    // Indítás
+    generateNewWord();
+</script>
+
+</body>
+</html>
