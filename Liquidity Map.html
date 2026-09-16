@@ -79,8 +79,7 @@
   </div>
 
   <script>
-    // Beállítva a saját Twelve Data API kulcsod
-    let API_KEY = localStorage.getItem('twelve_key') || '2c729e1c1a1840168a82136a5f04ee40';
+    let API_KEY = "2c729e1c1a1840168a82136a5f04ee40";
 
     const config = {
       symbol: 'EUR/USD',
@@ -109,22 +108,23 @@
     }
 
     async function fetchRealForex() {
-      const key = document.getElementById('apiKeyInput').value.trim() || API_KEY;
-      const url = `https://api.twelvedata.com/time_series?symbol=${config.symbol}&interval=${config.interval}&outputsize=100&apikey=${key}`;
+      const inputKey = document.getElementById('apiKeyInput').value.trim();
+      const key = inputKey || API_KEY;
+      
+      const url = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(config.symbol)}&interval=${config.interval}&outputsize=100&apikey=${key}`;
 
       try {
         const res = await fetch(url);
         const data = await res.json();
 
         if (data.status === 'error' || !data.values) {
-          document.getElementById('statusText').innerText = "Hiba: " + (data.message || "Hibás API kulcs");
+          document.getElementById('statusText').innerText = "Hiba: " + (data.message || "API limit vagy kulcs hiba");
           document.getElementById('statusDot').className = "status-dot error";
           return;
         }
 
-        // Twelve Data időrendi sorrend megfordítása a lightweight-charts számára
         candles = data.values.reverse().map(d => ({
-          time: new Date(d.datetime).getTime() / 1000,
+          time: Math.floor(new Date(d.datetime).getTime() / 1000),
           open: parseFloat(d.open),
           high: parseFloat(d.high),
           low: parseFloat(d.low),
@@ -137,7 +137,7 @@
         document.getElementById('statusText').innerText = `Éles FX Adat OK | ${new Date().toLocaleTimeString()}`;
         document.getElementById('statusDot').className = "status-dot";
       } catch (err) {
-        document.getElementById('statusText').innerText = "Hálózati hiba lekéréskor";
+        document.getElementById('statusText').innerText = "Hálózati hiba / CORS tiltás";
         document.getElementById('statusDot').className = "status-dot error";
       }
     }
@@ -173,13 +173,7 @@
       }
     }
 
-    // Eseménykezelők
     document.getElementById('apiKeyInput').addEventListener('change', (e) => {
-      const val = e.target.value.trim();
-      if (val) {
-        localStorage.setItem('twelve_key', val);
-        API_KEY = val;
-      }
       fetchRealForex();
     });
 
@@ -206,10 +200,9 @@
 
     window.onload = () => {
       initChart();
-      const savedKey = localStorage.getItem('twelve_key');
-      document.getElementById('apiKeyInput').value = savedKey || API_KEY;
+      document.getElementById('apiKeyInput').value = API_KEY;
       fetchRealForex();
-      setInterval(fetchRealForex, 15000); // 15 másodpercenkénti frissítés
+      setInterval(fetchRealForex, 60000); // 60 mp-es frissítés az API limit védelmében
     };
   </script>
 </body>
