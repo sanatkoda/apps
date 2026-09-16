@@ -9,16 +9,16 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #131722; color: #d1d4dc; display: flex; height: 100vh; overflow: hidden; }
     
-    #sidebar { width: 300px; background-color: #1e222d; border-right: 1px solid #2a2e39; display: flex; flex-direction: column; padding: 15px; gap: 15px; flex-shrink: 0; }
-    h2 { font-size: 15px; color: #f0b90b; text-transform: uppercase; border-bottom: 1px solid #2a2e39; padding-bottom: 8px; }
+    #sidebar { width: 320px; background-color: #1e222d; border-right: 1px solid #2a2e39; display: flex; flex-direction: column; padding: 15px; gap: 12px; flex-shrink: 0; overflow-y: auto; }
+    h2 { font-size: 13px; color: #f0b90b; text-transform: uppercase; border-bottom: 1px solid #2a2e39; padding-bottom: 6px; margin-top: 5px; }
     
     .control-group { display: flex; flex-direction: column; gap: 6px; }
-    label { font-size: 12px; color: #848e9c; font-weight: bold; }
-    select, input { background: #2a2e39; border: 1px solid #363c4e; color: #d1d4dc; padding: 8px; border-radius: 4px; font-size: 12px; outline: none; }
+    label { font-size: 11px; color: #848e9c; font-weight: bold; }
+    select, input { background: #2a2e39; border: 1px solid #363c4e; color: #d1d4dc; padding: 7px; border-radius: 4px; font-size: 12px; outline: none; }
     
     .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .toggle-btn { background: #2a2e39; border: 1px solid #363c4e; color: #848e9c; padding: 6px; border-radius: 4px; font-size: 11px; cursor: pointer; text-align: center; }
-    .toggle-btn.active { background: rgba(240, 185, 11, 0.15); border-color: #f0b90b; color: #f0b90b; font-weight: bold; }
+    .toggle-btn { background: #2a2e39; border: 1px solid #f0b90b; color: #f0b90b; padding: 8px; border-radius: 4px; font-size: 11px; cursor: pointer; text-align: center; font-weight: bold; }
+    .toggle-btn.inactive { background: #2a2e39; border-color: #363c4e; color: #848e9c; font-weight: normal; }
     
     #main { flex-grow: 1; display: flex; flex-direction: column; background: #131722; position: relative; }
     #header { height: 48px; border-bottom: 1px solid #2a2e39; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background: #1e222d; }
@@ -32,7 +32,7 @@
 <body>
 
   <div id="sidebar">
-    <h2>Twelve Data FX & SMC Map</h2>
+    <h1 style="font-size:16px; color:#d1d4dc; margin-bottom:5px;">Twelve Data FX Map</h1>
     
     <div class="control-group">
       <label>Twelve Data API Key:</label>
@@ -56,12 +56,24 @@
       </select>
     </div>
 
-    <div class="control-group">
-      <label>Szintek & SMC</label>
-      <div class="toggle-grid">
-        <div class="toggle-btn active" data-toggle="bsl_ssl">BSL / SSL</div>
-        <div class="toggle-btn active" data-toggle="smc_ob">SMC & OB</div>
-      </div>
+    <h2>Szintek</h2>
+    <div class="toggle-grid">
+      <div class="toggle-btn" data-toggle="bsl_ssl">BSL / SSL</div>
+      <div class="toggle-btn" data-toggle="sweeps">Sweeps</div>
+    </div>
+
+    <h2>SMC Struktúra & DWF/OB</h2>
+    <div class="toggle-grid">
+      <div class="toggle-btn" data-toggle="bos_choch">BOS / CHoCH</div>
+      <div class="toggle-btn" data-toggle="fvg">FVG (Gaps)</div>
+      <div class="toggle-btn" data-toggle="ob">Order Blocks</div>
+      <div class="toggle-btn inactive" data-toggle="heat">Strength Heat</div>
+    </div>
+
+    <h2>Munkamenet & HTF Szintek</h2>
+    <div class="toggle-grid">
+      <div class="toggle-btn" data-toggle="pdh_pdl">Prev Day H/L</div>
+      <div class="toggle-btn inactive" data-toggle="asian">Asian H/L</div>
     </div>
   </div>
 
@@ -82,7 +94,16 @@
     const config = {
       symbol: 'EUR/USD',
       interval: '5min',
-      toggles: { bsl_ssl: true, smc_ob: true }
+      toggles: {
+        bsl_ssl: true,
+        sweeps: true,
+        bos_choch: true,
+        fvg: true,
+        ob: true,
+        heat: false,
+        pdh_pdl: true,
+        asian: false
+      }
     };
 
     let chart, candleSeries;
@@ -109,7 +130,7 @@
       const inputKey = document.getElementById('apiKeyInput').value.trim();
       const key = inputKey || API_KEY;
       
-      const url = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(config.symbol)}&interval=${config.interval}&outputsize=100&apikey=${key}`;
+      const url = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(config.symbol)}&interval=${config.interval}&outputsize=150&apikey=${key}`;
 
       try {
         const res = await fetch(url);
@@ -130,7 +151,7 @@
         }));
 
         candleSeries.setData(candles);
-        analyzeLiquidityAndSMC();
+        analyzeAllSMC();
 
         document.getElementById('statusText').innerText = `Éles FX Adat OK | ${new Date().toLocaleTimeString()}`;
         document.getElementById('statusDot').className = "status-dot";
@@ -140,87 +161,138 @@
       }
     }
 
-    function analyzeLiquidityAndSMC() {
-      // Korábbi vonalak törlése
+    function analyzeAllSMC() {
+      // Vonalak törlése
       priceLines.forEach(l => candleSeries.removePriceLine(l));
       priceLines = [];
-      if (candles.length < 10) return;
+      if (candles.length < 15) return;
 
       const currentPrice = candles[candles.length - 1].close;
       const len = candles.length;
       let swings = [];
 
-      // Swing High (SH) és Swing Low (SL) azonosítása
       for (let i = 2; i < len - 2; i++) {
         if (candles[i].high > candles[i-1].high && candles[i].high > candles[i+2].high) {
-          swings.push({ type: 'SH', price: candles[i].high, index: i });
+          swings.push({ type: 'SH', price: candles[i].high, candle: candles[i], index: i });
         }
         if (candles[i].low < candles[i-1].low && candles[i].low < candles[i+2].low) {
-          swings.push({ type: 'SL', price: candles[i].low, index: i });
+          swings.push({ type: 'SL', price: candles[i].low, candle: candles[i], index: i });
         }
       }
 
-      // Dinamikus BSL / SSL szintek (szigorúan az aktuális ár helyzete szerint)
+      // 1. BSL / SSL Szintek
       if (config.toggles.bsl_ssl) {
-        // BSL: Kizárólag az AKTUÁLIS ÁR FELETTI még érintetlen swing csúcsok
-        const activeBSL = swings
-          .filter(s => s.type === 'SH' && s.price > currentPrice)
-          .slice(-2); // A legközelebbi 2 felső szint
-
-        // SSL: Kizárólag az AKTUÁLIS ÁR ALATTI még érintetlen swing völgyek
-        const activeSSL = swings
-          .filter(s => s.type === 'SL' && s.price < currentPrice)
-          .slice(-2); // A legközelebbi 2 alsó szint
+        const activeBSL = swings.filter(s => s.type === 'SH' && s.price > currentPrice).slice(-2);
+        const activeSSL = swings.filter(s => s.type === 'SL' && s.price < currentPrice).slice(-2);
 
         activeBSL.forEach(s => {
-          const line = candleSeries.createPriceLine({
-            price: s.price,
-            color: '#f6465d',
-            lineWidth: 1,
-            lineStyle: LightweightCharts.LineStyle.Dashed,
-            title: 'BSL'
-          });
-          priceLines.push(line);
+          priceLines.push(candleSeries.createPriceLine({
+            price: s.price, color: '#f6465d', lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dashed, title: 'BSL'
+          }));
         });
 
         activeSSL.forEach(s => {
-          const line = candleSeries.createPriceLine({
-            price: s.price,
-            color: '#0ecb81',
-            lineWidth: 1,
-            lineStyle: LightweightCharts.LineStyle.Dashed,
-            title: 'SSL'
-          });
-          priceLines.push(line);
+          priceLines.push(candleSeries.createPriceLine({
+            price: s.price, color: '#0ecb81', lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dashed, title: 'SSL'
+          }));
         });
       }
 
-      // SMC & Order Block (OB) szintek
-      if (config.toggles.smc_ob && swings.length > 2) {
-        const lastSH = [...swings].reverse().find(s => s.type === 'SH');
-        const lastSL = [...swings].reverse().find(s => s.type === 'SL');
-
-        if (lastSH && lastSH.price > currentPrice) {
-          const obBearish = candleSeries.createPriceLine({
-            price: lastSH.price,
-            color: '#ff9800',
-            lineWidth: 2,
-            lineStyle: LightweightCharts.LineStyle.Solid,
-            title: 'Bearish OB'
+      // 2. Sweeps (Likviditás-söprés)
+      if (config.toggles.sweeps) {
+        for (let i = len - 10; i < len; i++) {
+          swings.forEach(s => {
+            if (s.index < i) {
+              if (s.type === 'SH' && candles[i].high > s.price && candles[i].close < s.price) {
+                priceLines.push(candleSeries.createPriceLine({
+                  price: s.price, color: '#e91e63', lineWidth: 1,
+                  lineStyle: LightweightCharts.LineStyle.LargeDashed, title: 'SWEEP (BSL)'
+                }));
+              }
+              if (s.type === 'SL' && candles[i].low < s.price && candles[i].close > s.price) {
+                priceLines.push(candleSeries.createPriceLine({
+                  price: s.price, color: '#9c27b0', lineWidth: 1,
+                  lineStyle: LightweightCharts.LineStyle.LargeDashed, title: 'SWEEP (SSL)'
+                }));
+              }
+            }
           });
-          priceLines.push(obBearish);
         }
+      }
 
-        if (lastSL && lastSL.price < currentPrice) {
-          const obBullish = candleSeries.createPriceLine({
-            price: lastSL.price,
-            color: '#2196f3',
-            lineWidth: 2,
-            lineStyle: LightweightCharts.LineStyle.Solid,
-            title: 'Bullish OB'
-          });
-          priceLines.push(obBullish);
+      // 3. BOS / CHoCH
+      if (config.toggles.bos_choch && swings.length >= 2) {
+        const lastSH = swings.filter(s => s.type === 'SH').pop();
+        const lastSL = swings.filter(s => s.type === 'SL').pop();
+
+        if (lastSH) {
+          priceLines.push(candleSeries.createPriceLine({
+            price: lastSH.price, color: '#ff9800', lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dotted, title: 'CHoCH / BOS High'
+          }));
         }
+        if (lastSL) {
+          priceLines.push(candleSeries.createPriceLine({
+            price: lastSL.price, color: '#00bcd4', lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dotted, title: 'CHoCH / BOS Low'
+          }));
+        }
+      }
+
+      // 4. Order Blocks (OB) Zónák
+      if (config.toggles.ob && swings.length >= 2) {
+        const lastSH = swings.filter(s => s.type === 'SH').pop();
+        const lastSL = swings.filter(s => s.type === 'SL').pop();
+
+        if (lastSH) {
+          priceLines.push(candleSeries.createPriceLine({
+            price: lastSH.candle.high, color: '#ff9800', lineWidth: 2,
+            lineStyle: LightweightCharts.LineStyle.Solid, title: 'Bearish OB (Top)'
+          }));
+        }
+        if (lastSL) {
+          priceLines.push(candleSeries.createPriceLine({
+            price: lastSL.candle.low, color: '#2196f3', lineWidth: 2,
+            lineStyle: LightweightCharts.LineStyle.Solid, title: 'Bullish OB (Bottom)'
+          }));
+        }
+      }
+
+      // 5. FVG (Fair Value Gap) Imbalance
+      if (config.toggles.fvg) {
+        for (let i = len - 12; i < len - 1; i++) {
+          // Bullish FVG
+          if (candles[i-2].high < candles[i].low) {
+            priceLines.push(candleSeries.createPriceLine({
+              price: (candles[i-2].high + candles[i].low) / 2, color: '#00e676', lineWidth: 1,
+              lineStyle: LightweightCharts.LineStyle.Solid, title: 'Bullish FVG'
+            }));
+          }
+          // Bearish FVG
+          if (candles[i-2].low > candles[i].high) {
+            priceLines.push(candleSeries.createPriceLine({
+              price: (candles[i-2].low + candles[i].high) / 2, color: '#ff1744', lineWidth: 1,
+              lineStyle: LightweightCharts.LineStyle.Solid, title: 'Bearish FVG'
+            }));
+          }
+        }
+      }
+
+      // 6. Prev Day High / Low (PDH/PDL)
+      if (config.toggles.pdh_pdl) {
+        const pdh = Math.max(...candles.slice(0, -20).map(c => c.high));
+        const pdl = Math.min(...candles.slice(0, -20).map(c => c.low));
+
+        priceLines.push(candleSeries.createPriceLine({
+          price: pdh, color: '#e91e63', lineWidth: 2,
+          lineStyle: LightweightCharts.LineStyle.Solid, title: 'PDH'
+        }));
+        priceLines.push(candleSeries.createPriceLine({
+          price: pdl, color: '#9c27b0', lineWidth: 2,
+          lineStyle: LightweightCharts.LineStyle.Solid, title: 'PDL'
+        }));
       }
     }
 
@@ -242,8 +314,8 @@
       btn.addEventListener('click', () => {
         const key = btn.getAttribute('data-toggle');
         config.toggles[key] = !config.toggles[key];
-        btn.classList.toggle('active', config.toggles[key]);
-        analyzeLiquidityAndSMC();
+        btn.classList.toggle('inactive', !config.toggles[key]);
+        analyzeAllSMC();
       });
     });
 
