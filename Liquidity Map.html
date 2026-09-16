@@ -141,13 +141,16 @@
     }
 
     function analyzeLiquidityAndSMC() {
+      // Korábbi vonalak törlése
       priceLines.forEach(l => candleSeries.removePriceLine(l));
       priceLines = [];
       if (candles.length < 10) return;
 
+      const currentPrice = candles[candles.length - 1].close;
       const len = candles.length;
       let swings = [];
 
+      // Swing High (SH) és Swing Low (SL) azonosítása
       for (let i = 2; i < len - 2; i++) {
         if (candles[i].high > candles[i-1].high && candles[i].high > candles[i+2].high) {
           swings.push({ type: 'SH', price: candles[i].high, index: i });
@@ -157,43 +160,64 @@
         }
       }
 
-      // BSL / SSL Liquidity szintek
+      // Dinamikus BSL / SSL szintek (szigorúan az aktuális ár helyzete szerint)
       if (config.toggles.bsl_ssl) {
-        swings.slice(-4).forEach(s => {
+        // BSL: Kizárólag az AKTUÁLIS ÁR FELETTI még érintetlen swing csúcsok
+        const activeBSL = swings
+          .filter(s => s.type === 'SH' && s.price > currentPrice)
+          .slice(-2); // A legközelebbi 2 felső szint
+
+        // SSL: Kizárólag az AKTUÁLIS ÁR ALATTI még érintetlen swing völgyek
+        const activeSSL = swings
+          .filter(s => s.type === 'SL' && s.price < currentPrice)
+          .slice(-2); // A legközelebbi 2 alsó szint
+
+        activeBSL.forEach(s => {
           const line = candleSeries.createPriceLine({
             price: s.price,
-            color: s.type === 'SH' ? '#f6465d' : '#0ecb81',
+            color: '#f6465d',
             lineWidth: 1,
             lineStyle: LightweightCharts.LineStyle.Dashed,
-            title: s.type === 'SH' ? 'BSL (Buy-Side)' : 'SSL (Sell-Side)'
+            title: 'BSL'
+          });
+          priceLines.push(line);
+        });
+
+        activeSSL.forEach(s => {
+          const line = candleSeries.createPriceLine({
+            price: s.price,
+            color: '#0ecb81',
+            lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dashed,
+            title: 'SSL'
           });
           priceLines.push(line);
         });
       }
 
-      // SMC & Order Block (OB) szintek detektálása
+      // SMC & Order Block (OB) szintek
       if (config.toggles.smc_ob && swings.length > 2) {
         const lastSH = [...swings].reverse().find(s => s.type === 'SH');
         const lastSL = [...swings].reverse().find(s => s.type === 'SL');
 
-        if (lastSH) {
+        if (lastSH && lastSH.price > currentPrice) {
           const obBearish = candleSeries.createPriceLine({
             price: lastSH.price,
             color: '#ff9800',
             lineWidth: 2,
             lineStyle: LightweightCharts.LineStyle.Solid,
-            title: 'Bearish OB / CHoCH Level'
+            title: 'Bearish OB'
           });
           priceLines.push(obBearish);
         }
 
-        if (lastSL) {
+        if (lastSL && lastSL.price < currentPrice) {
           const obBullish = candleSeries.createPriceLine({
             price: lastSL.price,
             color: '#2196f3',
             lineWidth: 2,
             lineStyle: LightweightCharts.LineStyle.Solid,
-            title: 'Bullish OB / CHoCH Level'
+            title: 'Bullish OB'
           });
           priceLines.push(obBullish);
         }
