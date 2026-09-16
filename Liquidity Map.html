@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Éles Forex Liquidity Map (Twelve Data)</title>
+  <title>Éles Forex Liquidity & SMC Map</title>
   <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,7 +32,7 @@
 <body>
 
   <div id="sidebar">
-    <h2>Twelve Data FX Map</h2>
+    <h2>Twelve Data FX & SMC Map</h2>
     
     <div class="control-group">
       <label>Twelve Data API Key:</label>
@@ -57,12 +57,10 @@
     </div>
 
     <div class="control-group">
-      <label>Szintek</label>
+      <label>Szintek & SMC</label>
       <div class="toggle-grid">
         <div class="toggle-btn active" data-toggle="bsl_ssl">BSL / SSL</div>
-        <div class="toggle-btn active" data-toggle="sweeps">Sweeps</div>
-        <div class="toggle-btn active" data-toggle="bos_choch">BOS / CHoCH</div>
-        <div class="toggle-btn active" data-toggle="pdh_pdl">PDH / PDL</div>
+        <div class="toggle-btn active" data-toggle="smc_ob">SMC & OB</div>
       </div>
     </div>
   </div>
@@ -84,7 +82,7 @@
     const config = {
       symbol: 'EUR/USD',
       interval: '5min',
-      toggles: { bsl_ssl: true, sweeps: true, bos_choch: true, pdh_pdl: true }
+      toggles: { bsl_ssl: true, smc_ob: true }
     };
 
     let chart, candleSeries;
@@ -118,7 +116,7 @@
         const data = await res.json();
 
         if (data.status === 'error' || !data.values) {
-          document.getElementById('statusText').innerText = "Hiba: " + (data.message || "API limit vagy kulcs hiba");
+          document.getElementById('statusText').innerText = "Hiba: " + (data.message || "API limit / kulcs hiba");
           document.getElementById('statusDot').className = "status-dot error";
           return;
         }
@@ -132,7 +130,7 @@
         }));
 
         candleSeries.setData(candles);
-        analyzeLiquidity();
+        analyzeLiquidityAndSMC();
 
         document.getElementById('statusText').innerText = `Éles FX Adat OK | ${new Date().toLocaleTimeString()}`;
         document.getElementById('statusDot').className = "status-dot";
@@ -142,7 +140,7 @@
       }
     }
 
-    function analyzeLiquidity() {
+    function analyzeLiquidityAndSMC() {
       priceLines.forEach(l => candleSeries.removePriceLine(l));
       priceLines = [];
       if (candles.length < 10) return;
@@ -152,13 +150,14 @@
 
       for (let i = 2; i < len - 2; i++) {
         if (candles[i].high > candles[i-1].high && candles[i].high > candles[i+2].high) {
-          swings.push({ type: 'SH', price: candles[i].high });
+          swings.push({ type: 'SH', price: candles[i].high, index: i });
         }
         if (candles[i].low < candles[i-1].low && candles[i].low < candles[i+2].low) {
-          swings.push({ type: 'SL', price: candles[i].low });
+          swings.push({ type: 'SL', price: candles[i].low, index: i });
         }
       }
 
+      // BSL / SSL Liquidity szintek
       if (config.toggles.bsl_ssl) {
         swings.slice(-4).forEach(s => {
           const line = candleSeries.createPriceLine({
@@ -166,16 +165,42 @@
             color: s.type === 'SH' ? '#f6465d' : '#0ecb81',
             lineWidth: 1,
             lineStyle: LightweightCharts.LineStyle.Dashed,
-            title: s.type === 'SH' ? 'BSL' : 'SSL'
+            title: s.type === 'SH' ? 'BSL (Buy-Side)' : 'SSL (Sell-Side)'
           });
           priceLines.push(line);
         });
       }
+
+      // SMC & Order Block (OB) szintek detektálása
+      if (config.toggles.smc_ob && swings.length > 2) {
+        const lastSH = [...swings].reverse().find(s => s.type === 'SH');
+        const lastSL = [...swings].reverse().find(s => s.type === 'SL');
+
+        if (lastSH) {
+          const obBearish = candleSeries.createPriceLine({
+            price: lastSH.price,
+            color: '#ff9800',
+            lineWidth: 2,
+            lineStyle: LightweightCharts.LineStyle.Solid,
+            title: 'Bearish OB / CHoCH Level'
+          });
+          priceLines.push(obBearish);
+        }
+
+        if (lastSL) {
+          const obBullish = candleSeries.createPriceLine({
+            price: lastSL.price,
+            color: '#2196f3',
+            lineWidth: 2,
+            lineStyle: LightweightCharts.LineStyle.Solid,
+            title: 'Bullish OB / CHoCH Level'
+          });
+          priceLines.push(obBullish);
+        }
+      }
     }
 
-    document.getElementById('apiKeyInput').addEventListener('change', (e) => {
-      fetchRealForex();
-    });
+    document.getElementById('apiKeyInput').addEventListener('change', () => fetchRealForex());
 
     document.getElementById('symbolSelect').addEventListener('change', (e) => {
       config.symbol = e.target.value;
@@ -194,7 +219,7 @@
         const key = btn.getAttribute('data-toggle');
         config.toggles[key] = !config.toggles[key];
         btn.classList.toggle('active', config.toggles[key]);
-        analyzeLiquidity();
+        analyzeLiquidityAndSMC();
       });
     });
 
@@ -202,7 +227,7 @@
       initChart();
       document.getElementById('apiKeyInput').value = API_KEY;
       fetchRealForex();
-      setInterval(fetchRealForex, 60000); // 60 mp-es frissítés az API limit védelmében
+      setInterval(fetchRealForex, 60000);
     };
   </script>
 </body>
