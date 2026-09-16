@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magyar Nyugdíjszámító Kalkulátor (NYES figyelembevételével)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f7f6;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: #1e3c72;
+            border-bottom: 2px solid #eef2f5;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+            margin-top: 10px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #444;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: #2a5298;
+            outline: none;
+        }
+
+        .info-tip {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .btn-calc {
+            width: 100%;
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-calc:hover {
+            background: #219150;
+        }
+
+        .results-box {
+            margin-top: 30px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 24px;
+            display: none;
+        }
+
+        .results-box.active {
+            display: block;
+        }
+
+        .results-header {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #cbd5e1;
+            font-size: 14px;
+        }
+
+        .result-row.total {
+            border-bottom: none;
+            border-top: 2px solid #1e3c72;
+            margin-top: 12px;
+            padding-top: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        .disclaimer {
+            margin-top: 25px;
+            padding: 15px;
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            font-size: 12px;
+            color: #b45309;
+            border-radius: 4px;
+        }
+        
+        .disclaimer ul {
+            margin-left: 20px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Magyar Nyugdíjszámító Kalkulátor</h1>
+        <p>Állami öregségi nyugdíj kalkuláció a szolgálati idő és NYES figyelembevételével</p>
+    </div>
+
+    <div class="content">
+        <form id="pensionForm">
+            <!-- 1. Szolgálati évek -->
+            <div class="section-title">1. Szolgálati Évek Számítása</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="workYears">Munkában töltött évek száma:</label>
+                    <input type="number" id="workYears" min="0" max="60" value="35" required>
+                    <div class="info-tip">Munkaviszony, vállalkozói jogviszony években.</div>
+                </div>
+                <div class="form-group">
+                    <label for="militaryYears">Katonasági szolgálat (évek):</label>
+                    <input type="number" id="militaryYears" min="0" max="10" value="0">
+                    <div class="info-tip">Sorkatonai szolgálat elismert szolgálati időnek számít.</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="childCareYears">GYES / GYED / GYET évek száma:</label>
+                    <input type="number" id="childCareYears" min="0" max="20" value="0">
+                    <div class="info-tip">Gyermekgondozási időszakok elismert szolgálati ideje.</div>
+                </div>
+                <div class="form-group">
+                    <label for="uniYears">Felsőoktatásban töltött évek (1998 előtt!):</label>
+                    <input type="number" id="uniYears" min="0" max="10" value="0">
+                    <div class="info-tip">Csak az 1998. jan. 1. előtti nappali tagozatos tanulmányok!</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="nyesYears">NYES-en (Nyugdíj előtti álláskeresési segély) töltött idő (évek):</label>
+                    <input type="number" id="nyesYears" min="0" max="5" value="0" step="0.5">
+                    <div class="info-tip">A NYES folyósításának időtartama szolgálati időnek számít!</div>
+                </div>
+                <div class="form-group">
+                    <label for="buyYears">Vásárolt / Megváltott szolgálati évek száma:</label>
+                    <input type="number" id="buyYears" min="0" max="5" value="0">
+                    <div class="info-tip">Megállapodás alapján befizetett szolgálati idő.</div>
+                </div>
+            </div>
+
+            <!-- 2. Jövedelem / Béralap -->
+            <div class="section-title">2. Nyugdíj Alapját Képező Átlagkereset</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="valorizedSalary">1988 óta szerzett bruttó bérek valorizált havi nettó átlaga (Ft):</label>
+                    <input type="number" id="valorizedSalary" value="380000" step="5000" required>
+                    <div class="info-tip">Az állami nyugdíjszámítás hivatalos alapja (degresszió utáni nettó átlagkereset).</div>
+                </div>
+                <div class="form-group">
+                    <label for="buySalary">Szolgálati idő vásárlása esetén a megállapodási béralap (Ft):</label>
+                    <input type="number" id="buySalary" value="290800" step="5000">
+                    <div class="info-tip">Legalább a minimálbér összege (ennek 22%-a a havi járulékfizetés).</div>
+                </div>
+            </div>
+
+            <button type="button" class="btn-calc" onclick="calculatePension()">Kalkuláció Indítása</button>
+        </form>
+
+        <!-- Eredmények kijelzése -->
+        <div class="results-box" id="resultsBox">
+            <div class="results-header">Becsült Nyugdíjszámítási Eredmények</div>
+            
+            <div class="result-row">
+                <span>Alap szolgálati idő (munka, katonaság, GYES, egyetem):</span>
+                <strong id="resBaseYears">0 év</strong>
+            </div>
+            <div class="result-row">
+                <span>NYES és Vásárolt szolgálati idő:</span>
+                <strong id="resExtraYears">0 év</strong>
+            </div>
+            <div class="result-row">
+                <span>Összes elismert szolgálati idő:</span>
+                <strong id="resTotalYears">0 év</strong>
+            </div>
+            <div class="result-row">
+                <span>Állami nyugdíjszorzó (besorolási %):</span>
+                <strong id="resMultiplier">0 %</strong>
+            </div>
+            <div class="result-row">
+                <span>Kalkulált havi nettó átlagkereset (alap):</span>
+                <strong id="resFinalSalary">0 Ft</strong>
+            </div>
+            
+            <div class="result-row total">
+                <span>VÁRHATÓ HAVI ÖREGSÉGI NYUGDÍJ:</span>
+                <span id="resGrandTotal">0 Ft</span>
+            </div>
+
+            <div class="disclaimer">
+                <strong>Szabályozási és jogszabályi háttér:</strong>
+                <ul>
+                    <li><strong>NYES (Nyugdíj előtti álláskeresési segély):</strong> A NYES folyósításának időtartama a Tny. törvény alapján teljes mértékben szolgálati időnek minősül, és beleszámít a nyugdíj összegének meghatározásába.</li>
+                    <li><strong>Felsőoktatás:</strong> Csak az 1998. január 1. előtti nappali tagozatos felsőoktatási tanulmányok számítanak automatikusan szolgálati időnek! Az 1998 utáni tanulmányi évek külön megállapodással vásárolhatók meg.</li>
+                    <li><strong>Valorizált nettó átlagkereset:</strong> Az 1988 óta szerzett bruttó kereseteket az országos nettó átlagbér növekedésével egyenértékűen szorozzák fel (valorizálják), csökkentik a járulékokkal/adóval, és erre alkalmazzák a degressziós sávokat.</li>
+                    <li><strong>Szolgálati idő vásárlás:</strong> A megállapodással szerzett szolgálati idő az átlagkereset kiszámításánál is beszámít a megállapodásban vállalt béralap mértékével.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function getPensionMultiplier(years) {
+        if (years < 15) return 0;
+        if (years === 15) return 0.43;
+        if (years === 16) return 0.45;
+        if (years === 17) return 0.47;
+        if (years === 18) return 0.49;
+        if (years === 19) return 0.51;
+        if (years === 20) return 0.53;
+        
+        // 20 és 25 év között évenként +2%
+        if (years > 20 && years <= 25) {
+            return 0.53 + (years - 20) * 0.02;
+        }
+        
+        // 25 és 36 év között évenként +1%
+        if (years > 25 && years <= 36) {
+            return 0.63 + (years - 25) * 0.01;
+        }
+        
+        // 36 és 40 év között évenként +1.5%
+        if (years > 36 && years <= 40) {
+            return 0.74 + (years - 36) * 0.015;
+        }
+
+        // 40 év felett évenként +2%, max 100%
+        if (years > 40) {
+            let mult = 0.80 + (years - 40) * 0.02;
+            return mult > 1.0 ? 1.0 : mult;
+        }
+
+        return 0.80;
+    }
+
+    function calculatePension() {
+        const workYears = parseFloat(document.getElementById('workYears').value) || 0;
+        const militaryYears = parseFloat(document.getElementById('militaryYears').value) || 0;
+        const childCareYears = parseFloat(document.getElementById('childCareYears').value) || 0;
+        const uniYears = parseFloat(document.getElementById('uniYears').value) || 0;
+        const nyesYears = parseFloat(document.getElementById('nyesYears').value) || 0;
+        const buyYears = parseFloat(document.getElementById('buyYears').value) || 0;
+        
+        const valorizedSalary = parseFloat(document.getElementById('valorizedSalary').value) || 0;
+        const buySalary = parseFloat(document.getElementById('buySalary').value) || 0;
+
+        // 1. Összes szolgálati idő
+        const baseYears = workYears + militaryYears + childCareYears + uniYears;
+        const extraYears = nyesYears + buyYears;
+        const totalYears = Math.floor(baseYears + extraYears);
+        
+        // 2. Százalékos nyugdíjszorzó meghatározása a törvényi skála alapján
+        const multiplier = getPensionMultiplier(totalYears);
+
+        // 3. Átlagkereset korrekciója (ha volt vásárolt szolgálati idő elismert béralappal)
+        let finalSalaryBase = valorizedSalary;
+        if (buyYears > 0 && totalYears > 0) {
+            // Súlyozott átlag számítása a vásárolt évekre vállalt béralappal
+            finalSalaryBase = ((valorizedSalary * (totalYears - buyYears)) + (buySalary * buyYears)) / totalYears;
+        }
+        
+        // 4. Nyugdíj kiszámítása
+        const statePension = Math.round(finalSalaryBase * multiplier);
+
+        // Eredmények kiírása
+        document.getElementById('resBaseYears').innerText = baseYears + " év";
+        document.getElementById('resExtraYears').innerText = extraYears + " év";
+        document.getElementById('resTotalYears').innerText = totalYears + " év";
+        document.getElementById('resMultiplier').innerText = Math.round(multiplier * 100) + " %";
+        document.getElementById('resFinalSalary').innerText = Math.round(finalSalaryBase).toLocaleString('hu-HU') + " Ft";
+        document.getElementById('resGrandTotal').innerText = statePension.toLocaleString('hu-HU') + " Ft / hó";
+
+        document.getElementById('resultsBox').classList.add('active');
+    }
+</script>
+
+</body>
+</html>

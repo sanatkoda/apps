@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profi Tudományos Számológép</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px 0;
+        }
+
+        .calculator {
+            background-color: #22223b;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.5);
+            width: 440px;
+            max-width: 95%;
+        }
+
+        .top-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #00ffcc;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .display {
+            width: 100%;
+            height: 70px;
+            background-color: #0f0f1b;
+            border-radius: 10px;
+            color: #00ffcc;
+            font-size: 2rem;
+            text-align: right;
+            padding: 15px;
+            border: none;
+            outline: none;
+            margin-bottom: 15px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            height: 45px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            background-color: #4a4e69;
+            color: #ffffff;
+        }
+
+        button:hover {
+            opacity: 0.85;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-func { background-color: #9a8c98; color: #22223b; }
+        .btn-mem { background-color: #3d5a80; color: #fff; font-size: 0.85rem; }
+        .btn-operator { background-color: #ffb703; color: #000; }
+        .btn-clear { background-color: #e63946; color: #fff; }
+        .btn-equal { background-color: #00b4d8; color: #fff; grid-column: span 2; }
+        .btn-toggle { background-color: #7209b7; color: #fff; }
+
+        /* Előzmények panel */
+        .history-panel {
+            background-color: #181828;
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid #33334d;
+        }
+
+        .history-title {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #2a2a40;
+            padding-bottom: 4px;
+        }
+
+        .history-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .history-item {
+            font-size: 0.9rem;
+            color: #d1d5db;
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background-color: #2a2a40;
+            color: #00ffcc;
+        }
+
+        .history-item .expr {
+            color: #888;
+        }
+
+        .empty-history {
+            font-size: 0.85rem;
+            color: #555;
+            text-align: center;
+            padding: 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator">
+    <div class="top-info">
+        <span id="memIndicator">MEM: -</span>
+        <span id="modeIndicator">Mód: DEG (Fok)</span>
+    </div>
+    
+    <input type="text" class="display" id="display" readonly value="0">
+    
+    <div class="buttons">
+        <!-- 1. sor: Memória gombok -->
+        <button class="btn-mem" onclick="memClear()">MC</button>
+        <button class="btn-mem" onclick="memRecall()">MR</button>
+        <button class="btn-mem" onclick="memAdd()">M+</button>
+        <button class="btn-mem" onclick="memSave()">MS</button>
+        <button class="btn-toggle" onclick="toggleDegRad()" id="degRadBtn">DEG</button>
+
+        <!-- 2. sor -->
+        <button class="btn-func" onclick="appendValue('sin(')">sin</button>
+        <button class="btn-func" onclick="appendValue('cos(')">cos</button>
+        <button class="btn-func" onclick="appendValue('tan(')">tan</button>
+        <button class="btn-clear" onclick="clearDisplay()">C</button>
+        <button class="btn-clear" onclick="deleteLast()">DEL</button>
+
+        <!-- 3. sor -->
+        <button class="btn-func" onclick="appendValue('log(')">log</button>
+        <button class="btn-func" onclick="appendValue('ln(')">ln</button>
+        <button class="btn-func" onclick="appendValue('√(')">√</button>
+        <button class="btn-func" onclick="appendValue('!')">n!</button>
+        <button class="btn-func" onclick="appendValue('%')">%</button>
+
+        <!-- 4. sor -->
+        <button class="btn-func" onclick="appendValue('(')">(</button>
+        <button class="btn-func" onclick="appendValue(')')">)</button>
+        <button class="btn-func" onclick="appendValue('^')">x^y</button>
+        <button class="btn-func" onclick="appendValue('π')">π</button>
+        <button class="btn-func" onclick="appendValue('e')">e</button>
+
+        <!-- 5. sor -->
+        <button onclick="appendValue('7')">7</button>
+        <button onclick="appendValue('8')">8</button>
+        <button onclick="appendValue('9')">9</button>
+        <button class="btn-operator" onclick="appendValue('/')">÷</button>
+        <button class="btn-operator" onclick="appendValue('*')">×</button>
+
+        <!-- 6. sor -->
+        <button onclick="appendValue('4')">4</button>
+        <button onclick="appendValue('5')">5</button>
+        <button onclick="appendValue('6')">6</button>
+        <button class="btn-operator" onclick="appendValue('-')">-</button>
+        <button class="btn-operator" onclick="appendValue('+')">+</button>
+
+        <!-- 7. sor -->
+        <button onclick="appendValue('1')">1</button>
+        <button onclick="appendValue('2')">2</button>
+        <button onclick="appendValue('3')">3</button>
+        <button class="btn-func" onclick="toggleSign()">±</button>
+        <button onclick="appendValue('.')">.</button>
+
+        <!-- 8. sor -->
+        <button onclick="appendValue('0')">0</button>
+        <button class="btn-equal" onclick="calculate()">=</button>
+    </div>
+
+    <!-- Előzmények panel (utolsó 5 számolás) -->
+    <div class="history-panel">
+        <div class="history-title">Előzmények (Utolsó 5)</div>
+        <ul class="history-list" id="historyList">
+            <li class="empty-history">Még nincs mentett számolás</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    const display = document.getElementById('display');
+    const modeIndicator = document.getElementById('modeIndicator');
+    const memIndicator = document.getElementById('memIndicator');
+    const degRadBtn = document.getElementById('degRadBtn');
+    const historyList = document.getElementById('historyList');
+    
+    let isDeg = true;
+    let memory = 0;
+    let history = []; // Max 5 elem tárolása
+
+    // === DEG / RAD váltás ===
+    function toggleDegRad() {
+        isDeg = !isDeg;
+        if (isDeg) {
+            degRadBtn.innerText = 'DEG';
+            modeIndicator.innerText = 'Mód: DEG (Fok)';
+        } else {
+            degRadBtn.innerText = 'RAD';
+            modeIndicator.innerText = 'Mód: RAD (Radián)';
+        }
+    }
+
+    // === MEMÓRIA FUNKCIÓK ===
+    function memClear() {
+        memory = 0;
+        memIndicator.innerText = 'MEM: -';
+    }
+
+    function memRecall() {
+        if (display.value === '0' || display.value === 'Hiba') {
+            display.value = memory.toString();
+        } else {
+            display.value += memory.toString();
+        }
+    }
+
+    function memSave() {
+        const val = parseFloat(display.value);
+        if (!isNaN(val)) {
+            memory = val;
+            memIndicator.innerText = `MEM: ${memory}`;
+        }
+    }
+
+    function memAdd() {
+        const val = parseFloat(display.value);
+        if (!isNaN(val)) {
+            memory += val;
+            memIndicator.innerText = `MEM: ${memory}`;
+        }
+    }
+
+    // === BEVITEL ÉS TÖRLÉS ===
+    function appendValue(val) {
+        if (display.value === '0' || display.value === 'Hiba') {
+            display.value = val;
+        } else {
+            display.value += val;
+        }
+    }
+
+    function clearDisplay() {
+        display.value = '0';
+    }
+
+    function deleteLast() {
+        if (display.value.length === 1 || display.value === 'Hiba') {
+            display.value = '0';
+        } else {
+            display.value = display.value.slice(0, -1);
+        }
+    }
+
+    function toggleSign() {
+        if (display.value !== '0' && display.value !== 'Hiba') {
+            if (display.value.startsWith('-')) {
+                display.value = display.value.slice(1);
+            } else {
+                display.value = '-' + display.value;
+            }
+        }
+    }
+
+    // Faktoriális (!)
+    function factorial(n) {
+        if (n < 0) return NaN;
+        if (n === 0 || n === 1) return 1;
+        let result = 1;
+        for (let i = 2; i <= n; i++) result *= i;
+        return result;
+    }
+
+    // === SZÁMÍTÁS ===
+    function calculate() {
+        try {
+            let originalExpr = display.value;
+            let expr = originalExpr;
+
+            // Szimbólumok cseréje
+            expr = expr.replace(/π/g, 'Math.PI');
+            expr = expr.replace(/e/g, 'Math.E');
+            expr = expr.replace(/√\(/g, 'Math.sqrt(');
+            expr = expr.replace(/log\(/g, 'Math.log10(');
+            expr = expr.replace(/ln\(/g, 'Math.log(');
+            expr = expr.replace(/\^/g, '**');
+            expr = expr.replace(/%/g, '/100'); // Százalék kezelése
+
+            // Faktoriális (!) kezelése
+            expr = expr.replace(/(\d+)!/g, 'factorial($1)');
+
+            // TrigonometriaDEG/RAD szerint
+            if (isDeg) {
+                expr = expr.replace(/sin\(([^)]+)\)/g, 'Math.sin(($1) * Math.PI / 180)');
+                expr = expr.replace(/cos\(([^)]+)\)/g, 'Math.cos(($1) * Math.PI / 180)');
+                expr = expr.replace(/tan\(([^)]+)\)/g, 'Math.tan(($1) * Math.PI / 180)');
+            } else {
+                expr = expr.replace(/sin\(/g, 'Math.sin(');
+                expr = expr.replace(/cos\(/g, 'Math.cos(');
+                expr = expr.replace(/tan\(/g, 'Math.tan(');
+            }
+
+            let result = eval(expr);
+
+            if (!isFinite(result)) {
+                display.value = 'Hiba';
+            } else {
+                let formattedResult = Number(result.toFixed(8)).toString();
+                
+                // Előzmény mentése
+                addHistory(originalExpr, formattedResult);
+                
+                display.value = formattedResult;
+            }
+        } catch (error) {
+            display.value = 'Hiba';
+        }
+    }
+
+    // === ELŐZMÉNYEK KEZELÉSE ===
+    function addHistory(expr, result) {
+        history.unshift({ expr, result }); // Új elem a lista elejére
+        if (history.length > 5) {
+            history.pop(); // Csak az utolsó 5-öt tartjuk meg
+        }
+        renderHistory();
+    }
+
+    function renderHistory() {
+        if (history.length === 0) {
+            historyList.innerHTML = '<li class="empty-history">Még nincs mentett számolás</li>';
+            return;
+        }
+
+        historyList.innerHTML = '';
+        history.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            li.innerHTML = `<span class="expr">${item.expr} =</span> <strong>${item.result}</strong>`;
+            
+            // Kattintásra az eredmény kerül a kijelzőre
+            li.onclick = () => {
+                if (display.value === '0' || display.value === 'Hiba') {
+                    display.value = item.result;
+                } else {
+                    display.value += item.result;
+                }
+            };
+            historyList.appendChild(li);
+        });
+    }
+
+    // === BILLENTYŰZET TÁMOGATÁS ===
+    document.addEventListener('keydown', function(event) {
+        const key = event.key;
+
+        if (!isNaN(key)) {
+            appendValue(key);
+        } else if (['+', '-', '*', '/', '(', ')', '^', '.', '%'].includes(key)) {
+            appendValue(key);
+        } else if (key === ',') {
+            appendValue('.');
+        } else if (key === 'Enter' || key === '=') {
+            event.preventDefault();
+            calculate();
+        } else if (key === 'Backspace') {
+            deleteLast();
+        } else if (key === 'Escape' || key.toLowerCase() === 'c') {
+            clearDisplay();
+        } else if (key === '!') {
+            appendValue('!');
+        }
+    });
+</script>
+
+</body>
+</html>

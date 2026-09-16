@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trader State Monitor</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-blue: #38bdf8;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-yellow: #eab308;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .dashboard {
+            max-width: 1100px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            color: var(--accent-blue);
+        }
+
+        .live-clock {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--text-muted);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        /* Status Indicator */
+        .status-box {
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .status-optimal { background-color: rgba(34, 197, 94, 0.2); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .status-warning { background-color: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); }
+        .status-danger { background-color: rgba(239, 68, 68, 0.2); color: var(--accent-red); border: 1px solid var(--accent-red); }
+
+        /* Sliders & Form elements */
+        .metric-group {
+            margin-bottom: 15px;
+        }
+
+        .metric-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            color: var(--text-muted);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-blue);
+            cursor: pointer;
+        }
+
+        .grid-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+            display: block;
+        }
+
+        textarea, input[type="text"], input[type="number"] {
+            width: 100%;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: var(--text-main);
+            padding: 8px 10px;
+            margin-bottom: 10px;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            background-color: var(--bg-color);
+            border-radius: 5px;
+            height: 12px;
+            width: 100%;
+            overflow: hidden;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--accent-blue);
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        button {
+            background-color: var(--accent-blue);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            width: 100%;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .btn-delete {
+            background-color: transparent;
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            width: auto;
+        }
+
+        .btn-delete:hover {
+            background-color: var(--accent-red);
+            color: #fff;
+        }
+
+        /* Log Table */
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .log-table th, .log-table td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .log-table th {
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <!-- Header -->
+    <div class="header">
+        <h1>Trader State Monitor</h1>
+        <div class="live-clock" id="clock">00:00:00</div>
+    </div>
+
+    <!-- Mentális Állapot Monitor -->
+    <div class="card">
+        <h2>Mentális Állapot Monitor</h2>
+        <div id="statusBox" class="status-box status-optimal">
+            ÁLLAPOT: OPTIMÁLIS
+        </div>
+
+        <div class="metric-group">
+            <div class="metric-label">
+                <span>Érzelmi Kontroll (Calm vs Emotional)</span>
+                <span id="calmVal">8/10</span>
+            </div>
+            <input type="range" id="calmSlider" min="1" max="10" value="8" oninput="updateMetrics()">
+        </div>
+
+        <div class="metric-group">
+            <div class="metric-label">
+                <span>Fókusz & Éberség</span>
+                <span id="focusVal">8/10</span>
+            </div>
+            <input type="range" id="focusSlider" min="1" max="10" value="8" oninput="updateMetrics()">
+        </div>
+
+        <div class="metric-group">
+            <div class="metric-label">
+                <span>Fegyelem (Terv betartása)</span>
+                <span id="discVal">9/10</span>
+            </div>
+            <input type="range" id="discSlider" min="1" max="10" value="9" oninput="updateMetrics()">
+        </div>
+    </div>
+
+    <!-- PnL & Napi Célok -->
+    <div class="card">
+        <h2>Napi Célok & PnL Állapot</h2>
+        
+        <div class="grid-inputs">
+            <div>
+                <label for="targetInput">Profitcél ($)</label>
+                <input type="number" id="targetInput" value="500" onchange="updateMetrics()">
+            </div>
+            <div>
+                <label for="limitInput">Max Veszteség Limit ($)</label>
+                <input type="number" id="limitInput" value="250" onchange="updateMetrics()">
+            </div>
+        </div>
+
+        <div>
+            <label for="pnlInput">Aktuális Egyenleg / PnL ($)</label>
+            <input type="number" id="pnlInput" value="0" oninput="updateMetrics()">
+        </div>
+
+        <div class="metric-label">
+            <span>Cél teljesülése</span>
+            <span id="progressVal">0%</span>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </div>
+
+    <!-- Gyors Napló -->
+    <div class="card">
+        <h2>Gyors Kereskedési Napló</h2>
+        <input type="text" id="symbolInput" placeholder="Ssymbol / Eszköz (pl. EURUSD, BTC)">
+        <textarea id="noteInput" rows="3" placeholder="Mit érzel most? Mi a döntésed oka?"></textarea>
+        <button onclick="addLogEntry()">Bejegyzés Mentése</button>
+    </div>
+
+    <!-- Napló Előzmények -->
+    <div class="card" style="grid-column: 1 / -1;">
+        <h2>Session Log</h2>
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th>Idő</th>
+                    <th>Eszköz</th>
+                    <th>PnL</th>
+                    <th>Állapot</th>
+                    <th>Megjegyzés</th>
+                    <th>Művelet</th>
+                </tr>
+            </thead>
+            <tbody id="logBody">
+                <!-- Dinamikusan hozzáadott elemek -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Óra frissítése
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('clock').innerText = now.toTimeString().split(' ')[0];
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Állapot számítás és vizuális visszajelzés (Beleértve a PnL-t is)
+    function updateMetrics() {
+        const calm = parseInt(document.getElementById('calmSlider').value);
+        const focus = parseInt(document.getElementById('focusSlider').value);
+        const disc = parseInt(document.getElementById('discSlider').value);
+
+        const target = parseFloat(document.getElementById('targetInput').value) || 1;
+        const limit = Math.abs(parseFloat(document.getElementById('limitInput').value)) || 1;
+        const pnl = parseFloat(document.getElementById('pnlInput').value) || 0;
+
+        document.getElementById('calmVal').innerText = calm + '/10';
+        document.getElementById('focusVal').innerText = focus + '/10';
+        document.getElementById('discVal').innerText = disc + '/10';
+
+        // Progress bar frissítés
+        const progressBar = document.getElementById('progressBar');
+        const progressVal = document.getElementById('progressVal');
+        
+        let targetPercentage = Math.min(Math.max((pnl / target) * 100, 0), 100);
+        progressBar.style.width = targetPercentage + '%';
+        progressVal.innerText = targetPercentage.toFixed(0) + '%';
+
+        if (pnl < 0) {
+            progressBar.style.backgroundColor = 'var(--accent-red)';
+        } else {
+            progressBar.style.backgroundColor = 'var(--accent-blue)';
+        }
+
+        // Mentális állapot kiszámítása PnL hatással
+        const avg = (calm + focus + disc) / 3;
+        const statusBox = document.getElementById('statusBox');
+
+        // KO ESET: Elértük a veszteség limitet
+        if (pnl <= -limit) {
+            statusBox.className = 'status-box status-danger';
+            statusBox.innerText = 'ÁLLAPOT: VESZÉLY (Elérted a Max Veszteséget!)';
+            return;
+        }
+
+        // KO ESET: Elértük a profitcélt (Veszély: overtrading / nyereség visszaadása)
+        if (pnl >= target) {
+            statusBox.className = 'status-box status-warning';
+            statusBox.innerText = 'ÁLLAPOT: CÉL ELÉRVE (Állj le, ne overtrade-elj!)';
+            return;
+        }
+
+        // Ha közel vagyunk a veszteség limithez (80%-a elért veszteség)
+        if (pnl <= -(limit * 0.8)) {
+            statusBox.className = 'status-box status-warning';
+            statusBox.innerText = 'ÁLLAPOT: FOKOZOTT ÓVATOSSÁG (Közel a limithez)';
+            return;
+        }
+
+        // Általános mentális pontszám alapján
+        if (avg >= 7.5 && calm >= 6) {
+            statusBox.className = 'status-box status-optimal';
+            statusBox.innerText = 'ÁLLAPOT: OPTIMÁLIS (Készen állsz)';
+        } else if (avg >= 5) {
+            statusBox.className = 'status-box status-warning';
+            statusBox.innerText = 'ÁLLAPOT: ÓVATOS (Lassíts / Csökkents méretet)';
+        } else {
+            statusBox.className = 'status-box status-danger';
+            statusBox.innerText = 'ÁLLAPOT: VESZÉLY (Lépj el a géptől!)';
+        }
+    }
+
+    // Bejegyzés hozzáadása a naplóhoz
+    function addLogEntry() {
+        const symbol = document.getElementById('symbolInput').value.trim() || 'Általános';
+        const note = document.getElementById('noteInput').value.trim();
+        const pnl = document.getElementById('pnlInput').value;
+
+        if (!note) {
+            alert('Kérlek írj egy rövid megjegyzést!');
+            return;
+        }
+
+        const time = new Date().toTimeString().split(' ')[0];
+        const statusText = document.getElementById('statusBox').innerText.replace('ÁLLAPOT: ', '');
+
+        const logBody = document.getElementById('logBody');
+        const row = document.createElement('tr');
+
+        const pnlColor = pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+
+        row.innerHTML = `
+            <td>${time}</td>
+            <td><strong>${symbol.toUpperCase()}</strong></td>
+            <td style="color: ${pnlColor}; font-weight: bold;">$${pnl}</td>
+            <td>${statusText}</td>
+            <td>${note}</td>
+            <td><button class="btn-delete" onclick="deleteLogEntry(this)">Törlés</button></td>
+        `;
+
+        logBody.insertBefore(row, logBody.firstChild);
+
+        // Input törlés
+        document.getElementById('symbolInput').value = '';
+        document.getElementById('noteInput').value = '';
+    }
+
+    // Log sor törlése
+    function deleteLogEntry(button) {
+        const row = button.closest('tr');
+        row.remove();
+    }
+
+    // Kezdő inicializálás
+    updateMetrics();
+</script>
+
+</body>
+</html>

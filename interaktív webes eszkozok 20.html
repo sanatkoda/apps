@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>20 az 1-ben Webes Eszköztár</title>
+    <!-- Külső CDN-ek: MarkedJS (Markdown) és QRCodeJS (QR kód) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; height: 100vh; background-color: #121212; color: #e0e0e0; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 280px; background-color: #1e1e1e; border-right: 1px solid #333; display: flex; flex-direction: column; }
+        .sidebar h2 { padding: 18px; font-size: 1.1rem; color: #00bcd4; border-bottom: 1px solid #333; text-align: center; }
+        .nav-list { list-style: none; overflow-y: auto; flex: 1; }
+        .nav-item { padding: 10px 16px; cursor: pointer; border-bottom: 1px solid #282828; font-size: 0.88rem; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .nav-item:hover, .nav-item.active { background-color: #2a2a2a; color: #00bcd4; border-left: 4px solid #00bcd4; }
+
+        /* Main Area */
+        .main-content { flex: 1; padding: 25px; overflow-y: auto; background-color: #121212; }
+        .tool-panel { display: none; }
+        .tool-panel.active { display: block; }
+        h1 { margin-bottom: 15px; color: #fff; font-size: 1.5rem; border-bottom: 2px solid #00bcd4; padding-bottom: 5px; display: inline-block; }
+
+        /* Form Elemek */
+        textarea, input[type="text"], input[type="number"], select { width: 100%; background: #1e1e1e; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; font-size: 0.95rem; margin-bottom: 10px; outline: none; }
+        textarea { height: 160px; resize: vertical; font-family: monospace; }
+        button { background: #00bcd4; color: #121212; border: none; padding: 8px 16px; font-size: 0.95rem; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-right: 5px; margin-bottom: 5px; }
+        button:hover { background: #00acc1; }
+        .output-box { background: #1a1a1a; border: 1px solid #333; padding: 12px; border-radius: 6px; min-height: 80px; margin-top: 10px; white-space: pre-wrap; font-family: monospace; word-break: break-all; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        
+        /* Egyedi Komponensek */
+        .todo-item { display: flex; justify-content: space-between; background: #1e1e1e; padding: 8px; border-radius: 4px; margin-bottom: 5px; border: 1px solid #333; }
+        .todo-item.done { text-decoration: line-through; opacity: 0.5; }
+        .preview-box { width: 100%; height: 100px; background: #222; border: 1px solid #444; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>20 az 1-ben Eszköztár</h2>
+        <ul class="nav-list" id="navList">
+            <li class="nav-item active" onclick="switchTool(0)">1. Markdown Előnézet</li>
+            <li class="nav-item" onclick="switchTool(1)">2. JSON Formázó</li>
+            <li class="nav-item" onclick="switchTool(2)">3. Base64 Kódoló</li>
+            <li class="nav-item" onclick="switchTool(3)">4. RegEx Tesztelő</li>
+            <li class="nav-item" onclick="switchTool(4)">5. URL Kódoló</li>
+            <li class="nav-item" onclick="switchTool(5)">6. HTML Entity Kódoló</li>
+            <li class="nav-item" onclick="switchTool(6)">7. UUID Generáló</li>
+            <li class="nav-item" onclick="switchTool(7)">8. JWT Dekódoló</li>
+            <li class="nav-item" onclick="switchTool(8)">9. Szöveges Statisztika</li>
+            <li class="nav-item" onclick="switchTool(9)">10. Betűméret & Tokészlet</li>
+            <li class="nav-item" onclick="switchTool(10)">11. Szöveg összehasonlító</li>
+            <li class="nav-item" onclick="switchTool(11)">12. Lorem Ipsum Generáló</li>
+            <li class="nav-item" onclick="switchTool(12)">13. Színválasztó</li>
+            <li class="nav-item" onclick="switchTool(13)">14. CSS Box-Shadow</li>
+            <li class="nav-item" onclick="switchTool(14)">15. QR Kód Generáló</li>
+            <li class="nav-item" onclick="switchTool(15)">16. Jelszó Generáló</li>
+            <li class="nav-item" onclick="switchTool(16)">17. To-Do Lista</li>
+            <li class="nav-item" onclick="switchTool(17)">18. Mértékegység Átváltó</li>
+            <li class="nav-item" onclick="switchTool(18)">19. Hitel Kalkulátor</li>
+            <li class="nav-item" onclick="switchTool(19)">20. Stopper & Időzítő</li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        
+        <!-- 1. Markdown -->
+        <div class="tool-panel active">
+            <h1>Markdown Előnézet</h1>
+            <div class="grid-2">
+                <textarea id="mdInput" oninput="renderMarkdown()" placeholder="Írj ide Markdown formátumban... (# Cím, **félkövér**)"></textarea>
+                <div class="output-box" id="mdOutput" style="font-family: sans-serif;"></div>
+            </div>
+        </div>
+
+        <!-- 2. JSON Formázó -->
+        <div class="tool-panel">
+            <h1>JSON Formázó & Validator</h1>
+            <textarea id="jsonInput" placeholder="Illessz be nyers JSON-t..."></textarea>
+            <button onclick="formatJSON()">Formázás / Szépítés</button>
+            <div class="output-box" id="jsonOutput"></div>
+        </div>
+
+        <!-- 3. Base64 -->
+        <div class="tool-panel">
+            <h1>Base64 Kódoló / Dekódoló</h1>
+            <textarea id="base64Input" placeholder="Írd ide a szöveget..."></textarea>
+            <button onclick="encodeBase64()">Kódolás (Encode)</button>
+            <button onclick="decodeBase64()">Dekódolás (Decode)</button>
+            <div class="output-box" id="base64Output"></div>
+        </div>
+
+        <!-- 4. RegEx -->
+        <div class="tool-panel">
+            <h1>RegEx Tesztelő</h1>
+            <input type="text" id="regexPattern" placeholder="RegEx minta (pl. [a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})" oninput="testRegex()">
+            <textarea id="regexText" placeholder="Teszt szöveg..." oninput="testRegex()"></textarea>
+            <div class="output-box" id="regexOutput"></div>
+        </div>
+
+        <!-- 5. URL Kódoló -->
+        <div class="tool-panel">
+            <h1>URL Kódoló / Dekódoló</h1>
+            <textarea id="urlInput" placeholder="Írd vagy illessd be az URL-t / szöveget..."></textarea>
+            <button onclick="encodeURL()">URL Encode</button>
+            <button onclick="decodeURL()">URL Decode</button>
+            <div class="output-box" id="urlOutput"></div>
+        </div>
+
+        <!-- 6. HTML Entity -->
+        <div class="tool-panel">
+            <h1>HTML Entity Kódoló</h1>
+            <textarea id="htmlEntInput" placeholder="Írj HTML kódot (pl. <div>Hello & welcome</div>)..."></textarea>
+            <button onclick="encodeHTMLEntities()">Kódolás Entity-ké</button>
+            <button onclick="decodeHTMLEntities()">Dekódolás</button>
+            <div class="output-box" id="htmlEntOutput"></div>
+        </div>
+
+        <!-- 7. UUID Generáló -->
+        <div class="tool-panel">
+            <h1>UUID / GUID Generáló</h1>
+            <button onclick="generateUUIDs()">10 új UUID v4 Generálása</button>
+            <div class="output-box" id="uuidOutput" style="font-size: 1.1rem; color:#00ffcc;"></div>
+        </div>
+
+        <!-- 8. JWT Dekódoló -->
+        <div class="tool-panel">
+            <h1>JWT (JSON Web Token) Dekódoló</h1>
+            <textarea id="jwtInput" placeholder="Illessz be egy JWT tokent (eyJhbGci...)"></textarea>
+            <button onclick="decodeJWT()">Dekódolás</button>
+            <div class="grid-2">
+                <div><h3>Header:</h3><div class="output-box" id="jwtHeader"></div></div>
+                <div><h3>Payload:</h3><div class="output-box" id="jwtPayload"></div></div>
+            </div>
+        </div>
+
+        <!-- 9. Szöveges Statisztika -->
+        <div class="tool-panel">
+            <h1>Szöveges Statisztika</h1>
+            <textarea id="statsInput" oninput="analyzeText()" placeholder="Írj vagy illessz be szöveget..."></textarea>
+            <div class="output-box" id="statsOutput">Karakterek: 0 | Szavak: 0 | Mondatok: 0 | Olvasási idő: 0 perc</div>
+        </div>
+
+        <!-- 10. Betűméret & Tokészlet -->
+        <div class="tool-panel">
+            <h1>Kisbetű / Nagybetű Konverter</h1>
+            <textarea id="caseInput" placeholder="Írd ide a szöveget..."></textarea>
+            <button onclick="convertCase('upper')">NAGYBETŰS</button>
+            <button onclick="convertCase('lower')">kisbetűs</button>
+            <button onclick="convertCase('title')">Címkezdő Betűs</button>
+            <button onclick="convertCase('camel')">camelCase</button>
+            <div class="output-box" id="caseOutput"></div>
+        </div>
+
+        <!-- 11. Diff Checker -->
+        <div class="tool-panel">
+            <h1>Szöveg Összehasonlító (Diff)</h1>
+            <div class="grid-2">
+                <textarea id="diffText1" placeholder="Eredeti szöveg..."></textarea>
+                <textarea id="diffText2" placeholder="Módosított szöveg..."></textarea>
+            </div>
+            <button onclick="compareTexts()">Összehasonlítás</button>
+            <div class="output-box" id="diffOutput"></div>
+        </div>
+
+        <!-- 12. Lorem Ipsum Generáló -->
+        <div class="tool-panel">
+            <h1>Lorem Ipsum Generáló</h1>
+            <div class="flex-row">
+                <label>Bekezdések száma:</label>
+                <input type="number" id="loremCount" value="3" min="1" max="20" style="width:80px;">
+                <button onclick="generateLorem()">Generálás</button>
+            </div>
+            <div class="output-box" id="loremOutput"></div>
+        </div>
+
+        <!-- 13. Színválasztó -->
+        <div class="tool-panel">
+            <h1>Színválasztó & Átváltó</h1>
+            <div class="flex-row">
+                <input type="color" id="colorPicker" value="#00bcd4" onchange="updateColor()" style="width:80px; height:45px; cursor:pointer;">
+                <input type="text" id="colorHex" readonly style="width:150px;">
+            </div>
+            <div class="output-box" id="colorDetails"></div>
+        </div>
+
+        <!-- 14. CSS Box-Shadow Generáló -->
+        <div class="tool-panel">
+            <h1>CSS Box-Shadow Generáló</h1>
+            <div class="grid-2">
+                <div>
+                    <label>X-Eltolás: <span id="shadowXVal">5</span>px</label>
+                    <input type="range" id="shadowX" min="-50" max="50" value="5" oninput="updateShadow()">
+                    <label>Y-Eltolás: <span id="shadowYVal">5</span>px</label>
+                    <input type="range" id="shadowY" min="-50" max="50" value="5" oninput="updateShadow()">
+                    <label>Elmosás (Blur): <span id="shadowBlurVal">10</span>px</label>
+                    <input type="range" id="shadowBlur" min="0" max="100" value="10" oninput="updateShadow()">
+                    <label>Terjedés (Spread): <span id="shadowSpreadVal">0</span>px</label>
+                    <input type="range" id="shadowSpread" min="-20" max="50" value="0" oninput="updateShadow()">
+                </div>
+                <div>
+                    <div class="preview-box">
+                        <div id="shadowTarget" style="width:100px; height:60px; background:#00bcd4; border-radius:6px;"></div>
+                    </div>
+                    <div class="output-box" id="shadowCode"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 15. QR Kód -->
+        <div class="tool-panel">
+            <h1>QR Kód Generáló</h1>
+            <input type="text" id="qrInput" placeholder="URL vagy szöveg..." value="https://google.com">
+            <button onclick="generateQR()">QR Kód Létrehozása</button>
+            <div id="qrcode" style="margin-top:15px; background:#fff; padding:15px; display:inline-block; border-radius:8px;"></div>
+        </div>
+
+        <!-- 16. Jelszó Generáló -->
+        <div class="tool-panel">
+            <h1>Jelszó Generáló</h1>
+            <div class="flex-row">
+                <label>Hossz: <span id="passLenVal">16</span></label>
+                <input type="range" id="passLength" min="8" max="64" value="16" oninput="document.getElementById('passLenVal').innerText=this.value" style="width:200px;">
+            </div>
+            <button onclick="generatePassword()">Jelszó Generálása</button>
+            <div class="output-box" id="passOutput" style="font-size: 1.3rem; color:#00bcd4;"></div>
+        </div>
+
+        <!-- 17. To-Do -->
+        <div class="tool-panel">
+            <h1>To-Do Lista</h1>
+            <div class="flex-row">
+                <input type="text" id="todoInput" placeholder="Új feladat...">
+                <button onclick="addTodo()">Hozzáadás</button>
+            </div>
+            <div id="todoList"></div>
+        </div>
+
+        <!-- 18. Mértékegység Átváltó -->
+        <div class="tool-panel">
+            <h1>Mértékegység Átváltó</h1>
+            <div class="flex-row">
+                <input type="number" id="unitVal" value="1" oninput="convertUnits()" style="width:120px;">
+                <select id="unitType" onchange="convertUnits()" style="width:220px;">
+                    <option value="km_mi">Kilométer ➔ Mérföld</option>
+                    <option value="mi_km">Mérföld ➔ Kilométer</option>
+                    <option value="c_f">Celsius ➔ Fahrenheit</option>
+                    <option value="f_c">Fahrenheit ➔ Celsius</option>
+                    <option value="kg_lbs">Kilogramm ➔ Font (lbs)</option>
+                </select>
+            </div>
+            <div class="output-box" id="unitOutput" style="font-size:1.3rem; color:#00bcd4;"></div>
+        </div>
+
+        <!-- 19. Hitel Kalkulátor -->
+        <div class="tool-panel">
+            <h1>Hitel- & Törlesztő Kalkulátor</h1>
+            <div class="grid-2">
+                <div>
+                    <label>Hitelösszeg (Ft):</label>
+                    <input type="number" id="loanAmount" value="5000000">
+                    <label>Éves Kamat (%):</label>
+                    <input type="number" id="loanRate" value="8.5" step="0.1">
+                    <label>Futamidő (évek):</label>
+                    <input type="number" id="loanYears" value="10">
+                    <button onclick="calcLoan()">Számítás</button>
+                </div>
+                <div class="output-box" id="loanOutput" style="font-size:1.1rem;"></div>
+            </div>
+        </div>
+
+        <!-- 20. Stopper & Időzítő -->
+        <div class="tool-panel">
+            <h1>Stopper & Időzítő</h1>
+            <div style="font-size: 3rem; font-family: monospace; color:#00bcd4; margin-bottom:15px;" id="timerDisplay">00:00:00.0</div>
+            <button onclick="startTimer()">Start</button>
+            <button onclick="stopTimer()">Stop</button>
+            <button onclick="resetTimer()">Reset</button>
+        </div>
+
+    </div>
+
+<script>
+    function switchTool(index) {
+        document.querySelectorAll('.nav-item').forEach((item, i) => item.classList.toggle('active', i === index));
+        document.querySelectorAll('.tool-panel').forEach((panel, i) => panel.classList.toggle('active', i === index));
+    }
+
+    // 1. Markdown
+    function renderMarkdown() {
+        document.getElementById('mdOutput').innerHTML = marked.parse(document.getElementById('mdInput').value);
+    }
+
+    // 2. JSON
+    function formatJSON() {
+        const out = document.getElementById('jsonOutput');
+        try {
+            out.style.color = '#00ffcc';
+            out.innerText = JSON.stringify(JSON.parse(document.getElementById('jsonInput').value), null, 4);
+        } catch (e) { out.style.color = '#ff5252'; out.innerText = "Érvénytelen JSON!"; }
+    }
+
+    // 3. Base64
+    function encodeBase64() {
+        try { document.getElementById('base64Output').innerText = btoa(unescape(encodeURIComponent(document.getElementById('base64Input').value))); } catch(e){}
+    }
+    function decodeBase64() {
+        try { document.getElementById('base64Output').innerText = decodeURIComponent(escape(atob(document.getElementById('base64Input').value))); } catch(e){ document.getElementById('base64Output').innerText = "Hibás Base64!"; }
+    }
+
+    // 4. RegEx
+    function testRegex() {
+        const pattern = document.getElementById('regexPattern').value;
+        const text = document.getElementById('regexText').value;
+        const out = document.getElementById('regexOutput');
+        if(!pattern) { out.innerText = "Adj meg mintát!"; return; }
+        try {
+            const matches = text.match(new RegExp(pattern, 'g'));
+            out.innerText = matches ? `Találatok (${matches.length}):\n` + matches.join('\n') : "Nincs találat.";
+        } catch(e) { out.innerText = "Hibás RegEx!"; }
+    }
+
+    // 5. URL
+    function encodeURL() { document.getElementById('urlOutput').innerText = encodeURIComponent(document.getElementById('urlInput').value); }
+    function decodeURL() { document.getElementById('urlOutput').innerText = decodeURIComponent(document.getElementById('urlInput').value); }
+
+    // 6. HTML Entity
+    function encodeHTMLEntities() {
+        document.getElementById('htmlEntOutput').innerText = document.getElementById('htmlEntInput').value.replace(/[\u00A0-\u9999<>\&]/g, i => '&#'+i.charCodeAt(0)+';');
+    }
+    function decodeHTMLEntities() {
+        const txt = document.createElement('textarea');
+        txt.innerHTML = document.getElementById('htmlEntInput').value;
+        document.getElementById('htmlEntOutput').innerText = txt.value;
+    }
+
+    // 7. UUID
+    function generateUUIDs() {
+        let res = "";
+        for(let i=0; i<10; i++) {
+            res += crypto.randomUUID() + "\n";
+        }
+        document.getElementById('uuidOutput').innerText = res;
+    }
+
+    // 8. JWT Dekódoló
+    function decodeJWT() {
+        try {
+            const parts = document.getElementById('jwtInput').value.split('.');
+            document.getElementById('jwtHeader').innerText = JSON.stringify(JSON.parse(atob(parts[0])), null, 2);
+            document.getElementById('jwtPayload').innerText = JSON.stringify(JSON.parse(atob(parts[1])), null, 2);
+        } catch(e) {
+            document.getElementById('jwtHeader').innerText = "Hibás JWT Token!";
+            document.getElementById('jwtPayload').innerText = "";
+        }
+    }
+
+    // 9. Statisztika
+    function analyzeText() {
+        const text = document.getElementById('statsInput').value;
+        const words = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+        document.getElementById('statsOutput').innerText = 
+            `Karakterek: ${text.length} | Szavak: ${words} | Mondatok: ${text.split(/[.!?]+/).filter(Boolean).length} | Olvasási idő: ~${Math.ceil(words / 200)} perc`;
+    }
+
+    // 10. Betűkonverter
+    function convertCase(type) {
+        const txt = document.getElementById('caseInput').value;
+        let res = txt;
+        if(type==='upper') res = txt.toUpperCase();
+        if(type==='lower') res = txt.toLowerCase();
+        if(type==='title') res = txt.replace(/\b\w/g, c => c.toUpperCase());
+        if(type==='camel') res = txt.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase());
+        document.getElementById('caseOutput').innerText = res;
+    }
+
+    // 11. Diff Checker
+    function compareTexts() {
+        const t1 = document.getElementById('diffText1').value.split('\n');
+        const t2 = document.getElementById('diffText2').value.split('\n');
+        let out = "";
+        const max = Math.max(t1.length, t2.length);
+        for(let i=0; i<max; i++) {
+            if(t1[i] !== t2[i]) {
+                out += `Sor ${i+1}:\n- ${t1[i] || ''}\n+ ${t2[i] || ''}\n\n`;
+            }
+        }
+        document.getElementById('diffOutput').innerText = out || "A két szöveg teljesen megegyezik!";
+    }
+
+    // 12. Lorem Ipsum
+    function generateLorem() {
+        const count = parseInt(document.getElementById('loremCount').value) || 1;
+        const base = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
+        let res = [];
+        for(let i=0; i<count; i++) res.push(base);
+        document.getElementById('loremOutput').innerText = res.join('\n\n');
+    }
+
+    // 13. Színválasztó
+    function updateColor() {
+        const hex = document.getElementById('colorPicker').value;
+        document.getElementById('colorHex').value = hex;
+        const r = parseInt(hex.substr(1,2), 16), g = parseInt(hex.substr(3,2), 16), b = parseInt(hex.substr(5,2), 16);
+        document.getElementById('colorDetails').innerText = `HEX: ${hex}\nRGB: rgb(${r}, ${g}, ${b})`;
+    }
+    updateColor();
+
+    // 14. Box-Shadow
+    function updateShadow() {
+        const x = document.getElementById('shadowX').value;
+        const y = document.getElementById('shadowY').value;
+        const blur = document.getElementById('shadowBlur').value;
+        const spread = document.getElementById('shadowSpread').value;
+        
+        document.getElementById('shadowXVal').innerText = x;
+        document.getElementById('shadowYVal').innerText = y;
+        document.getElementById('shadowBlurVal').innerText = blur;
+        document.getElementById('shadowSpreadVal').innerText = spread;
+
+        const shadowCss = `${x}px ${y}px ${blur}px ${spread}px rgba(0,0,0,0.5)`;
+        document.getElementById('shadowTarget').style.boxShadow = shadowCss;
+        document.getElementById('shadowCode').innerText = `box-shadow: ${shadowCss};`;
+    }
+    updateShadow();
+
+    // 15. QR Kód
+    function generateQR() {
+        const qrContainer = document.getElementById('qrcode');
+        qrContainer.innerHTML = "";
+        if(document.getElementById('qrInput').value) {
+            new QRCode(qrContainer, { text: document.getElementById('qrInput').value, width: 140, height: 140 });
+        }
+    }
+    generateQR();
+
+    // 16. Jelszó
+    function generatePassword() {
+        const len = document.getElementById('passLength').value;
+        const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=";
+        let pass = "";
+        for (let i = 0; i < len; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+        document.getElementById('passOutput').innerText = pass;
+    }
+
+    // 17. To-Do
+    let todos = JSON.parse(localStorage.getItem('web_tools_20_todos') || '[]');
+    function renderTodos() {
+        const container = document.getElementById('todoList');
+        container.innerHTML = "";
+        todos.forEach((t, i) => {
+            const div = document.createElement('div');
+            div.className = `todo-item ${t.done ? 'done' : ''}`;
+            div.innerHTML = `<span onclick="toggleTodo(${i})" style="cursor:pointer;">${t.text}</span>
+                             <button onclick="deleteTodo(${i})" style="background:#e63946; padding:2px 6px;">X</button>`;
+            container.appendChild(div);
+        });
+        localStorage.setItem('web_tools_20_todos', JSON.stringify(todos));
+    }
+    function addTodo() {
+        const inp = document.getElementById('todoInput');
+        if(inp.value.trim()) { todos.push({ text: inp.value.trim(), done: false }); inp.value = ""; renderTodos(); }
+    }
+    function toggleTodo(i) { todos[i].done = !todos[i].done; renderTodos(); }
+    function deleteTodo(i) { todos.splice(i, 1); renderTodos(); }
+    renderTodos();
+
+    // 18. Mértékegység
+    function convertUnits() {
+        const val = parseFloat(document.getElementById('unitVal').value) || 0;
+        const type = document.getElementById('unitType').value;
+        let res = 0, unit = "";
+        if(type==='km_mi') { res = val * 0.621371; unit = "mérföld"; }
+        if(type==='mi_km') { res = val / 0.621371; unit = "km"; }
+        if(type==='c_f') { res = (val * 9/5) + 32; unit = "°F"; }
+        if(type==='f_c') { res = (val - 32) * 5/9; unit = "°C"; }
+        if(type==='kg_lbs') { res = val * 2.20462; unit = "lbs"; }
+        document.getElementById('unitOutput').innerText = `${res.toFixed(2)} ${unit}`;
+    }
+    convertUnits();
+
+    // 19. Hitel
+    function calcLoan() {
+        const P = parseFloat(document.getElementById('loanAmount').value);
+        const r = (parseFloat(document.getElementById('loanRate').value) / 100) / 12;
+        const n = parseFloat(document.getElementById('loanYears').value) * 12;
+        
+        const monthly = (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+        const total = monthly * n;
+        
+        document.getElementById('loanOutput').innerText = 
+            `Havi törlesztő: ${Math.round(monthly).toLocaleString()} Ft\nTeljes visszafizetés: ${Math.round(total).toLocaleString()} Ft\nKamatteher: ${Math.round(total - P).toLocaleString()} Ft`;
+    }
+
+    // 20. Stopper
+    let timerInterval = null, startTime = 0, elapsedTime = 0;
+    function updateTimerDisplay() {
+        const totalMs = elapsedTime + (startTime ? Date.now() - startTime : 0);
+        const ms = Math.floor((totalMs % 1000) / 100);
+        const sec = Math.floor((totalMs / 1000) % 60);
+        const min = Math.floor((totalMs / (1000 * 60)) % 60);
+        const hrs = Math.floor(totalMs / (1000 * 60 * 60));
+        document.getElementById('timerDisplay').innerText = 
+            `${String(hrs).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${ms}`;
+    }
+    function startTimer() {
+        if(!timerInterval) {
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimerDisplay, 100);
+        }
+    }
+    function stopTimer() {
+        if(timerInterval) {
+            elapsedTime += Date.now() - startTime;
+            startTime = 0;
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    }
+    function resetTimer() {
+        stopTimer();
+        elapsedTime = 0;
+        updateTimerDisplay();
+    }
+</script>
+</body>
+</html>
