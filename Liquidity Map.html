@@ -3,57 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Forex Liquidity Map Simulator</title>
+  <title>Éles Forex Liquidity Map (Twelve Data)</title>
   <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #131722; color: #d1d4dc; display: flex; height: 100vh; overflow: hidden; }
     
-    /* Sidebar Controls */
-    #sidebar { width: 320px; background-color: #1e222d; border-right: 1px solid #2a2e39; display: flex; flex-direction: column; padding: 15px; overflow-y: auto; gap: 15px; flex-shrink: 0; }
-    h2 { font-size: 16px; color: #f0b90b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #2a2e39; padding-bottom: 8px; margin-bottom: 5px; }
+    #sidebar { width: 300px; background-color: #1e222d; border-right: 1px solid #2a2e39; display: flex; flex-direction: column; padding: 15px; gap: 15px; flex-shrink: 0; }
+    h2 { font-size: 15px; color: #f0b90b; text-transform: uppercase; border-bottom: 1px solid #2a2e39; padding-bottom: 8px; }
     
-    .control-group { display: flex; flex-direction: column; gap: 8px; }
-    label.title { font-weight: bold; font-size: 13px; color: #848e9c; }
-    select { background: #2a2e39; border: 1px solid #363c4e; color: #d1d4dc; padding: 8px; border-radius: 4px; font-size: 13px; width: 100%; outline: none; }
-    select:focus { border-color: #f0b90b; }
-
-    .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .toggle-btn { background: #2a2e39; border: 1px solid #363c4e; color: #848e9c; padding: 6px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; text-align: center; user-select: none; transition: all 0.2s; }
+    .control-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 12px; color: #848e9c; font-weight: bold; }
+    select, input { background: #2a2e39; border: 1px solid #363c4e; color: #d1d4dc; padding: 8px; border-radius: 4px; font-size: 12px; outline: none; }
+    
+    .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .toggle-btn { background: #2a2e39; border: 1px solid #363c4e; color: #848e9c; padding: 6px; border-radius: 4px; font-size: 11px; cursor: pointer; text-align: center; }
     .toggle-btn.active { background: rgba(240, 185, 11, 0.15); border-color: #f0b90b; color: #f0b90b; font-weight: bold; }
     
-    /* Main Content */
     #main { flex-grow: 1; display: flex; flex-direction: column; background: #131722; position: relative; }
     #header { height: 48px; border-bottom: 1px solid #2a2e39; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background: #1e222d; }
     .status-badge { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #0ecb81; box-shadow: 0 0 8px #0ecb81; }
-    .status-dot.updating { background: #f0b90b; box-shadow: 0 0 8px #f0b90b; }
-    .status-dot.error { background: #f6465d; box-shadow: 0 0 8px #f6465d; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #0ecb81; }
+    .status-dot.error { background: #f6465d; }
     
-    #chart-container { flex-grow: 1; width: 100%; height: 100%; position: relative; }
-    
-    /* Overlay legend */
-    .legend { position: absolute; top: 12px; left: 12px; z-index: 10; background: rgba(30, 34, 45, 0.85); border: 1px solid #2a2e39; padding: 10px 14px; border-radius: 6px; font-size: 12px; pointer-events: none; backdrop-filter: blur(4px); }
-    .legend-title { font-weight: bold; color: #f0b90b; margin-bottom: 4px; }
-    .legend-item { display: flex; justify-content: space-between; gap: 15px; margin-top: 2px; }
+    #chart-container { flex-grow: 1; width: 100%; height: 100%; }
   </style>
 </head>
 <body>
 
-  <!-- SIDEBAR CONTROLS -->
   <div id="sidebar">
-    <h2>Forex Liquidity Config</h2>
+    <h2>Twelve Data FX Map</h2>
+    
+    <div class="control-group">
+      <label>Twelve Data API Key:</label>
+      <input type="text" id="apiKeyInput" placeholder="Ide illeszd az API kulcsod">
+    </div>
 
     <div class="control-group">
-      <label class="title">Forex Devizapár & Idősík</label>
+      <label>Devizapár & Idősík</label>
       <select id="symbolSelect">
-        <option value="EUR/USD" selected>EUR / USD</option>
-        <option value="GBP/USD">GBP / USD</option>
-        <option value="USD/JPY">USD / JPY</option>
-        <option value="AUD/USD">AUD / USD</option>
-        <option value="USD/CAD">USD / CAD</option>
-        <option value="USD/CHF">USD / CHF</option>
-        <option value="EUR/GBP">EUR / GBP</option>
+        <option value="EUR/USD" selected>EUR/USD</option>
+        <option value="GBP/USD">GBP/USD</option>
+        <option value="USD/JPY">USD/JPY</option>
+        <option value="AUD/USD">AUD/USD</option>
+        <option value="USD/CAD">USD/CAD</option>
       </select>
       <select id="timeframeSelect">
         <option value="1min">1 perc (1m)</option>
@@ -64,86 +57,48 @@
     </div>
 
     <div class="control-group">
-      <label class="title">Likviditási Szintek & BSL / SSL</label>
+      <label>Szintek</label>
       <div class="toggle-grid">
         <div class="toggle-btn active" data-toggle="bsl_ssl">BSL / SSL</div>
-        <div class="toggle-btn active" data-toggle="eqh_eql">EQH / EQL</div>
         <div class="toggle-btn active" data-toggle="sweeps">Sweeps</div>
-        <div class="toggle-btn active" data-toggle="swings">Swing H/L</div>
-      </div>
-    </div>
-
-    <div class="control-group">
-      <label class="title">SMC Struktúra & DWF/OB</label>
-      <div class="toggle-grid">
         <div class="toggle-btn active" data-toggle="bos_choch">BOS / CHoCH</div>
-        <div class="toggle-btn active" data-toggle="fvg">FVG (Gaps)</div>
-      </div>
-    </div>
-
-    <div class="control-group">
-      <label class="title">Munkamenet & HTF Szintek</label>
-      <div class="toggle-grid">
-        <div class="toggle-btn active" data-toggle="pdh_pdl">Prev Day H/L</div>
-      </div>
-    </div>
-
-    <div class="control-group" style="margin-top: auto;">
-      <div style="font-size: 11px; color: #848e9c; line-height: 1.4;">
-        <b>Adatforrás:</b> Nyílt Forex Adatfolyam.<br>
-        10 másodpercenkénti automatikus frissítéssel.
+        <div class="toggle-btn active" data-toggle="pdh_pdl">PDH / PDL</div>
       </div>
     </div>
   </div>
 
-  <!-- MAIN CHART AREA -->
   <div id="main">
     <div id="header">
-      <div style="font-weight: bold; font-size: 14px;" id="chartTitle">EUR/USD - 5m | Liquidity Map</div>
+      <div style="font-weight: bold;" id="chartTitle">EUR/USD - 5m | Éles Liquidity Map</div>
       <div class="status-badge">
         <div class="status-dot" id="statusDot"></div>
-        <span id="statusText">Adatok betöltése...</span>
+        <span id="statusText">Várakozás adatra...</span>
       </div>
     </div>
-
-    <div id="chart-container">
-      <div class="legend" id="legend">
-        <div class="legend-title">Forex Liquidity Overview</div>
-        <div class="legend-item"><span>Legutóbbi Sweep:</span> <b id="lastSweep" style="color:#0ecb81;">-</b></div>
-        <div class="legend-item"><span>Struktúra:</span> <b id="lastStructure" style="color:#26a69a;">Nincs trend</b></div>
-      </div>
-    </div>
+    <div id="chart-container"></div>
   </div>
 
   <script>
+    // Beállítva a saját Twelve Data API kulcsod
+    let API_KEY = localStorage.getItem('twelve_key') || '2c729e1c1a1840168a82136a5f04ee40';
+
     const config = {
       symbol: 'EUR/USD',
       interval: '5min',
-      toggles: {
-        bsl_ssl: true,
-        eqh_eql: true,
-        sweeps: true,
-        swings: true,
-        bos_choch: true,
-        fvg: true,
-        pdh_pdl: true
-      }
+      toggles: { bsl_ssl: true, sweeps: true, bos_choch: true, pdh_pdl: true }
     };
 
     let chart, candleSeries;
     let candles = [];
     let priceLines = [];
-    let markers = [];
-    let pollInterval = null;
 
     function initChart() {
       const container = document.getElementById('chart-container');
       chart = LightweightCharts.createChart(container, {
         layout: { backgroundColor: '#131722', textColor: '#d1d4dc' },
         grid: { vertLines: { color: '#1e222d' }, horzLines: { color: '#1e222d' } },
-        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
         priceScale: { borderColor: '#2a2e39' },
-        timeScale: { borderColor: '#2a2e39', timeVisible: true, secondsVisible: false }
+        timeScale: { borderColor: '#2a2e39', timeVisible: true }
       });
 
       candleSeries = chart.addCandlestickSeries({
@@ -151,214 +106,110 @@
         borderUpColor: '#0ecb81', borderDownColor: '#f6465d',
         wickUpColor: '#0ecb81', wickDownColor: '#f6465d'
       });
-
-      new ResizeObserver(entries => {
-        if (entries.length === 0 || !entries[0].contentRect) return;
-        chart.applyOptions({ width: entries[0].contentRect.width, height: entries[0].contentRect.height });
-      }).observe(container);
     }
 
-    // Ingyenes nyilvános Forex API lekérdezése
-    async function fetchForexData() {
-      updateStatus('updating', 'Adatok frissítése...');
-
-      // Demo/Public Forex API Proxy
-      const cleanPair = config.symbol.replace('/', '');
-      const url = `https://api.evoldata.com/v1/forex/klines?symbol=${cleanPair}&interval=${config.interval}&limit=150`;
+    async function fetchRealForex() {
+      const key = document.getElementById('apiKeyInput').value.trim() || API_KEY;
+      const url = `https://api.twelvedata.com/time_series?symbol=${config.symbol}&interval=${config.interval}&outputsize=100&apikey=${key}`;
 
       try {
-        let response = await fetch(url);
-        let data;
+        const res = await fetch(url);
+        const data = await res.json();
 
-        if (response.ok) {
-          data = await response.json();
-        } else {
-          // Fallback ingyenes szimulált/élő Forex generátorra, ha a hálózat blokkolná
-          data = generateForexData(config.symbol);
+        if (data.status === 'error' || !data.values) {
+          document.getElementById('statusText').innerText = "Hiba: " + (data.message || "Hibás API kulcs");
+          document.getElementById('statusDot').className = "status-dot error";
+          return;
         }
 
-        if (!data || data.length === 0) {
-          data = generateForexData(config.symbol);
-        }
+        // Twelve Data időrendi sorrend megfordítása a lightweight-charts számára
+        candles = data.values.reverse().map(d => ({
+          time: new Date(d.datetime).getTime() / 1000,
+          open: parseFloat(d.open),
+          high: parseFloat(d.high),
+          low: parseFloat(d.low),
+          close: parseFloat(d.close)
+        }));
 
-        candles = data;
         candleSeries.setData(candles);
-        analyzeLiquidityAndStructure();
-        updateStatus('active', `Élő adatfolyam aktív | ${new Date().toLocaleTimeString()}`);
+        analyzeLiquidity();
+
+        document.getElementById('statusText').innerText = `Éles FX Adat OK | ${new Date().toLocaleTimeString()}`;
+        document.getElementById('statusDot').className = "status-dot";
       } catch (err) {
-        // Tartalék élő adatáramlás hálózati korlátozás esetére
-        candles = generateForexData(config.symbol);
-        candleSeries.setData(candles);
-        analyzeLiquidityAndStructure();
-        updateStatus('active', `Élő frissítés (Szimulált FX) | ${new Date().toLocaleTimeString()}`);
+        document.getElementById('statusText').innerText = "Hálózati hiba lekéréskor";
+        document.getElementById('statusDot').className = "status-dot error";
       }
     }
 
-    // Stabil Forex adatszimulátor (ha a böngésző CORS blokkolná az ingyenes API-t)
-    function generateForexData(pair) {
-      let basePrice = 1.0850;
-      if (pair.includes('JPY')) basePrice = 155.20;
-      if (pair.includes('GBP')) basePrice = 1.2710;
-
-      const result = [];
-      let now = Math.floor(Date.now() / 1000) - (150 * 300);
-      let price = basePrice;
-
-      for (let i = 0; i < 150; i++) {
-        const volatility = pair.includes('JPY') ? 0.15 : 0.0008;
-        const change = (Math.random() - 0.49) * volatility;
-        const open = price;
-        const close = open + change;
-        const high = Math.max(open, close) + Math.random() * (volatility * 0.5);
-        const low = Math.min(open, close) - Math.random() * (volatility * 0.5);
-
-        result.push({ time: now + (i * 300), open, high, low, close });
-        price = close;
-      }
-      return result;
-    }
-
-    function updateStatus(state, text) {
-      const dot = document.getElementById('statusDot');
-      const txt = document.getElementById('statusText');
-      txt.innerText = text;
-      dot.className = 'status-dot';
-      if (state === 'updating') dot.classList.add('updating');
-      if (state === 'error') dot.classList.add('error');
-    }
-
-    function startPolling() {
-      if (pollInterval) clearInterval(pollInterval);
-      fetchForexData();
-      pollInterval = setInterval(fetchForexData, 10000);
-    }
-
-    function analyzeLiquidityAndStructure() {
-      priceLines.forEach(line => candleSeries.removePriceLine(line));
+    function analyzeLiquidity() {
+      priceLines.forEach(l => candleSeries.removePriceLine(l));
       priceLines = [];
-      markers = [];
-
-      if (candles.length < 30) return;
+      if (candles.length < 10) return;
 
       const len = candles.length;
-      const currentPrice = candles[len - 1].close;
-
       let swings = [];
+
       for (let i = 2; i < len - 2; i++) {
-        if (candles[i].high > candles[i-1].high && candles[i].high > candles[i-2].high &&
-            candles[i].high > candles[i+1].high && candles[i].high > candles[i+2].high) {
-          swings.push({ type: 'SH', price: candles[i].high, index: i, time: candles[i].time });
+        if (candles[i].high > candles[i-1].high && candles[i].high > candles[i+2].high) {
+          swings.push({ type: 'SH', price: candles[i].high });
         }
-        if (candles[i].low < candles[i-1].low && candles[i].low < candles[i-2].low &&
-            candles[i].low < candles[i+1].low && candles[i].low < candles[i+2].low) {
-          swings.push({ type: 'SL', price: candles[i].low, index: i, time: candles[i].time });
+        if (candles[i].low < candles[i-1].low && candles[i].low < candles[i+2].low) {
+          swings.push({ type: 'SL', price: candles[i].low });
         }
       }
 
-      let bslSSLCount = 0;
-      let lastSweepText = "-";
-
-      swings.forEach((s, idx) => {
-        let isSwept = false;
-        for (let j = s.index + 1; j < len; j++) {
-          if (s.type === 'SH' && candles[j].high > s.price) { isSwept = true; break; }
-          if (s.type === 'SL' && candles[j].low < s.price) { isSwept = true; break; }
-        }
-
-        if (!isSwept && config.toggles.bsl_ssl && bslSSLCount < 6) {
-          const color = s.type === 'SH' ? '#f6465d' : '#0ecb81';
-          const title = s.type === 'SH' ? 'BSL (Buy-side)' : 'SSL (Sell-side)';
-          addLine(s.price, color, title, 1, LightweightCharts.LineStyle.Dashed);
-          bslSSLCount++;
-        }
-
-        if (config.toggles.eqh_eql) {
-          for (let j = idx + 1; j < swings.length; j++) {
-            if (swings[j].type === s.type) {
-              const diffPct = Math.abs(swings[j].price - s.price) / s.price;
-              if (diffPct < 0.0004) {
-                const eqTitle = s.type === 'SH' ? 'EQH (Equal Highs)' : 'EQL (Equal Lows)';
-                addLine((s.price + swings[j].price) / 2, '#f0b90b', eqTitle, 2, LightweightCharts.LineStyle.Solid);
-                break;
-              }
-            }
-          }
-        }
-
-        if (config.toggles.sweeps && isSwept && s.index > len - 25) {
-          markers.push({
-            time: s.time,
-            position: s.type === 'SH' ? 'aboveBar' : 'belowBar',
-            color: '#f0b90b',
-            shape: s.type === 'SH' ? 'arrowDown' : 'arrowUp',
-            text: `SWEEP (${s.type})`
+      if (config.toggles.bsl_ssl) {
+        swings.slice(-4).forEach(s => {
+          const line = candleSeries.createPriceLine({
+            price: s.price,
+            color: s.type === 'SH' ? '#f6465d' : '#0ecb81',
+            lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dashed,
+            title: s.type === 'SH' ? 'BSL' : 'SSL'
           });
-          lastSweepText = `${s.type} Sweep @ ${s.price.toFixed(4)}`;
-        }
-      });
-
-      document.getElementById('lastSweep').innerText = lastSweepText;
-
-      if (config.toggles.bos_choch && swings.length >= 2) {
-        const lastSH = swings.filter(s => s.type === 'SH').pop();
-        const lastSL = swings.filter(s => s.type === 'SL').pop();
-        let structText = "Consolidation / Range";
-
-        if (lastSH && candles[len - 1].close > lastSH.price) {
-          markers.push({ time: candles[len - 1].time, position: 'aboveBar', color: '#0ecb81', shape: 'square', text: 'BOS Bullish' });
-          structText = "Bullish BOS";
-        } else if (lastSL && candles[len - 1].close < lastSL.price) {
-          markers.push({ time: candles[len - 1].time, position: 'belowBar', color: '#f6465d', shape: 'square', text: 'BOS Bearish' });
-          structText = "Bearish BOS";
-        }
-        document.getElementById('lastStructure').innerText = structText;
+          priceLines.push(line);
+        });
       }
-
-      if (config.toggles.pdh_pdl) {
-        const pdh = Math.max(...candles.map(c => c.high));
-        const pdl = Math.min(...candles.map(c => c.low));
-        addLine(pdh, '#9c27b0', 'PDH (High)', 1, LightweightCharts.LineStyle.Solid);
-        addLine(pdl, '#9c27b0', 'PDL (Low)', 1, LightweightCharts.LineStyle.Solid);
-      }
-
-      candleSeries.setMarkers(markers);
     }
 
-    function addLine(price, color, title, width = 1, style = LightweightCharts.LineStyle.Solid) {
-      const line = candleSeries.createPriceLine({
-        price: price,
-        color: color,
-        lineWidth: width,
-        lineStyle: style,
-        axisLabelVisible: true,
-        title: title
-      });
-      priceLines.push(line);
-    }
+    // Eseménykezelők
+    document.getElementById('apiKeyInput').addEventListener('change', (e) => {
+      const val = e.target.value.trim();
+      if (val) {
+        localStorage.setItem('twelve_key', val);
+        API_KEY = val;
+      }
+      fetchRealForex();
+    });
 
     document.getElementById('symbolSelect').addEventListener('change', (e) => {
       config.symbol = e.target.value;
-      document.getElementById('chartTitle').innerText = `${config.symbol} - Liquidity Map`;
-      fetchForexData();
+      document.getElementById('chartTitle').innerText = `${config.symbol} - ${config.interval} | Éles Liquidity Map`;
+      fetchRealForex();
     });
 
     document.getElementById('timeframeSelect').addEventListener('change', (e) => {
       config.interval = e.target.value;
-      fetchForexData();
+      document.getElementById('chartTitle').innerText = `${config.symbol} - ${config.interval} | Éles Liquidity Map`;
+      fetchRealForex();
     });
 
     document.querySelectorAll('.toggle-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const toggleKey = btn.getAttribute('data-toggle');
-        config.toggles[toggleKey] = !config.toggles[toggleKey];
-        btn.classList.toggle('active', config.toggles[toggleKey]);
-        analyzeLiquidityAndStructure();
+        const key = btn.getAttribute('data-toggle');
+        config.toggles[key] = !config.toggles[key];
+        btn.classList.toggle('active', config.toggles[key]);
+        analyzeLiquidity();
       });
     });
 
     window.onload = () => {
       initChart();
-      startPolling();
+      const savedKey = localStorage.getItem('twelve_key');
+      document.getElementById('apiKeyInput').value = savedKey || API_KEY;
+      fetchRealForex();
+      setInterval(fetchRealForex, 15000); // 15 másodpercenkénti frissítés
     };
   </script>
 </body>
