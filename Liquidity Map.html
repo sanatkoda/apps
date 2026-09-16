@@ -27,6 +27,18 @@
     .status-dot.error { background: #f6465d; }
     
     #chart-container { flex-grow: 1; width: 100%; height: 100%; }
+
+    /* Pop-up értesítés stílusok */
+    #toast-container { position: absolute; top: 60px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+    .toast { background: #1e222d; border-left: 4px solid #f0b90b; color: #fff; padding: 12px 16px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); font-size: 13px; animation: slideIn 0.3s ease-out; min-width: 220px; }
+    .toast.bullish { border-left-color: #0ecb81; }
+    .toast.bearish { border-left-color: #f6465d; }
+    .toast-title { font-weight: bold; margin-bottom: 3px; font-size: 12px; color: #848e9c; }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -67,7 +79,7 @@
       <div class="toggle-btn" data-toggle="bos_choch">BOS / CHoCH</div>
       <div class="toggle-btn" data-toggle="fvg">FVG (Gaps)</div>
       <div class="toggle-btn" data-toggle="ob">Order Blocks</div>
-      <div class="toggle-btn inactive" data-toggle="heat">Strength Heat</div>
+      <div class="toggle-btn" data-toggle="patterns">Candle Patterns</div>
     </div>
 
     <h2>Munkamenet & HTF Szintek</h2>
@@ -86,6 +98,7 @@
       </div>
     </div>
     <div id="chart-container"></div>
+    <div id="toast-container"></div>
   </div>
 
   <script>
@@ -100,7 +113,7 @@
         bos_choch: true,
         fvg: true,
         ob: true,
-        heat: false,
+        patterns: true,
         pdh_pdl: true,
         asian: false
       }
@@ -109,6 +122,7 @@
     let chart, candleSeries;
     let candles = [];
     let priceLines = [];
+    let lastNotifiedTime = null;
 
     function initChart() {
       const container = document.getElementById('chart-container');
@@ -161,8 +175,21 @@
       }
     }
 
+    function showToast(title, message, type = '') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<div class="toast-title">${title}</div><div>${message}</div>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => toast.remove(), 500);
+      }, 5000);
+    }
+
     function analyzeAllSMC() {
-      // Vonalak törlése
       priceLines.forEach(l => candleSeries.removePriceLine(l));
       priceLines = [];
       if (candles.length < 15) return;
@@ -200,7 +227,7 @@
         });
       }
 
-      // 2. Sweeps (Likviditás-söprés)
+      // 2. Sweeps
       if (config.toggles.sweeps) {
         for (let i = len - 10; i < len; i++) {
           swings.forEach(s => {
@@ -260,17 +287,15 @@
         }
       }
 
-      // 5. FVG (Fair Value Gap) Imbalance
+      // 5. FVG (Fair Value Gap)
       if (config.toggles.fvg) {
         for (let i = len - 12; i < len - 1; i++) {
-          // Bullish FVG
           if (candles[i-2].high < candles[i].low) {
             priceLines.push(candleSeries.createPriceLine({
               price: (candles[i-2].high + candles[i].low) / 2, color: '#00e676', lineWidth: 1,
               lineStyle: LightweightCharts.LineStyle.Solid, title: 'Bullish FVG'
             }));
           }
-          // Bearish FVG
           if (candles[i-2].low > candles[i].high) {
             priceLines.push(candleSeries.createPriceLine({
               price: (candles[i-2].low + candles[i].high) / 2, color: '#ff1744', lineWidth: 1,
@@ -280,7 +305,93 @@
         }
       }
 
-      // 6. Prev Day High / Low (PDH/PDL)
+      // 6. Gyertyaalakzatok felismerése és jelölése (Candlestick Patterns)
+      if (config.toggles.patterns) {
+        let markers = [];
+        let latestPattern = null;
+
+        for (let i = 2; i < len; i++) {
+          const c = candles[i];
+          const prev = candles[i-1];
+          const prev2 = candles[i-2];
+
+          const body = Math.abs(c.close - c.open);
+          const range = c.high - c.low;
+          const upperWick = c.high - Math.max(c.close, c.open);
+          const lowerWick = Math.min(c.close, c.open) - c.low;
+
+          const isBullish = c.close > c.open;
+          const isBearish = c.close < c.open;
+
+          let patternName = '';
+          let position = '';
+          let color = '';
+          let shape = '';
+
+          // Doji
+          if (body <= range * 0.1 && range > 0) {
+            patternName = 'Doji';
+            position = isBullish ? 'belowBar' : 'aboveBar';
+            color = '#ffeb3b';
+            shape = 'circle';
+          }
+          // Hammer (Kalapács - Bullish)
+          else if (lowerWick >= body * 2 && upperWick <= body * 0.5) {
+            patternName = 'Hammer';
+            position = 'belowBar';
+            color = '#0ecb81';
+            shape = 'arrowUp';
+          }
+          // Inverted Hammer / Shooting Star (Bearish)
+          else if (upperWick >= body * 2 && lowerWick <= body * 0.5) {
+            patternName = 'Shooting Star';
+            position = 'aboveBar';
+            color = '#f6465d';
+            shape = 'arrowDown';
+          }
+          // Bullish Engulfing
+          else if (prev.close < prev.open && c.close > c.open && c.close > prev.open && c.open < prev.close) {
+            patternName = 'Bullish Engulfing';
+            position = 'belowBar';
+            color = '#0ecb81';
+            shape = 'arrowUp';
+          }
+          // Bearish Engulfing
+          else if (prev.close > prev.open && c.close < c.open && c.close < prev.open && c.open > prev.close) {
+            patternName = 'Bearish Engulfing';
+            position = 'aboveBar';
+            color = '#f6465d';
+            shape = 'arrowDown';
+          }
+
+          if (patternName) {
+            markers.push({
+              time: c.time,
+              position: position,
+              color: color,
+              shape: shape,
+              text: patternName
+            });
+
+            // Utolsó előtti/utolsó gyertya vizsgálata értesítéshez
+            if (i >= len - 2) {
+              latestPattern = { name: patternName, time: c.time, type: color === '#0ecb81' ? 'bullish' : (color === '#f6465d' ? 'bearish' : '') };
+            }
+          }
+        }
+
+        candleSeries.setMarkers(markers);
+
+        // Pop-up értesítés megjelenítése, ha új gyertyaalakzat született
+        if (latestPattern && lastNotifiedTime !== latestPattern.time) {
+          lastNotifiedTime = latestPattern.time;
+          showToast(`Új gyertyaalakzat (${config.symbol})`, `Felismerve: <b>${latestPattern.name}</b>`, latestPattern.type);
+        }
+      } else {
+        candleSeries.setMarkers([]);
+      }
+
+      // 7. Prev Day High / Low
       if (config.toggles.pdh_pdl) {
         const pdh = Math.max(...candles.slice(0, -20).map(c => c.high));
         const pdl = Math.min(...candles.slice(0, -20).map(c => c.low));
