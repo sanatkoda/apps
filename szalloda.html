@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Info & Guide</title>
+    <!-- Modern, tiszta stílusok -->
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.5rem;
+        }
+
+        header p {
+            margin: 0;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        /* Nyelvi fordító doboz a jobb felső sarokban */
+        .translator-container {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .wifi-box {
+            background: #eef2f7;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .wifi-pass {
+            font-weight: bold;
+            font-family: monospace;
+            background: #fff;
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.8rem;
+            color: #777;
+        }
+        
+        /* Google Translate elem finomhangolás, hogy szép legyen */
+        .goog-te-combo {
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 0.85rem;
+        }
+        #google_translate_element span {
+            display: none; /* Eltünteti a zavaró Google szövegeket */
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <!-- Diszkrét nyelvi fordító a sarokban -->
+        <div class="translator-container">
+            <div id="google_translate_element"></div>
+        </div>
+        
+        <h1>Grand Hotel Oasis</h1>
+        <p>Digital Guest Directory & Guide</p>
+    </header>
+
+    <div class="container">
+
+        <!-- Wi-Fi kártya -->
+        <div class="card">
+            <h2>📶 Free Wi-Fi</h2>
+            <p>Stay connected during your stay with our high-speed network.</p>
+            <div class="wifi-box">
+                <span>Network: <strong>Hotel_Guest</strong></span>
+                <span class="wifi-pass">Welcome2026</span>
+            </div>
+        </div>
+
+        <!-- Fontos időpontok -->
+        <div class="card">
+            <h2>⏰ Important Times</h2>
+            <ul>
+                <li><strong>Breakfast:</strong> 07:00 – 10:00 (Main Restaurant)</li>
+                <li><strong>Wellness & Sauna:</strong> 08:00 – 21:00</li>
+                <li><strong>Check-out time:</strong> Until 11:00 AM</li>
+            </ul>
+        </div>
+
+        <!-- Szolgáltatások -->
+        <div class="card">
+            <h2>🛎️ Hotel Services</h2>
+            <ul>
+                <li><strong>Reception:</strong> Dial "0" from your room phone or visit the lobby desk 24/7.</li>
+                <li><strong>Room Cleaning:</strong> Please hang your "Do Not Disturb" sign on the door handle if you prefer privacy.</li>
+                <li><strong>Luggage Storage:</strong> Available free of charge at the front desk upon request.</li>
+            </ul>
+        </div>
+
+        <!-- Helyi ajánlók / Programok -->
+        <div class="card">
+            <h2>📍 Explore the Area</h2>
+            <p>Discover nearby attractions, restaurants, and public transport options.</p>
+            <a href="https://maps.google.com" target="_blank" class="btn">Open Recommended Places in Maps</a>
+        </div>
+
+        <!-- Segélyhívók -->
+        <div class="card" style="border-left: 4px solid #e74c3c;">
+            <h2>🚨 Emergency Contacts</h2>
+            <ul>
+                <li><strong>Reception (Internal):</strong> 0</li>
+                <li><strong>European Emergency Number:</strong> 112</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <footer>
+        &copy; 2026 Grand Hotel Oasis. Have a pleasant stay!
+    </footer>
+
+    <!-- Google Translate Script -->
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'en,de,hu,it,fr,es,pl,sk', // Kiválaszthatja a főbb nyelveket
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+</body>
+</html>
