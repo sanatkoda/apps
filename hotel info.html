@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Többnyelvű Információs Sávok</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 100%;
+            margin: 0;
+            padding: 15px;
+            box-sizing: border-box;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 20px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+
+        .controls, .action-bar {
+            margin-bottom: 15px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        label {
+            font-weight: bold;
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        select, button {
+            padding: 6px 12px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            background-color: #fff;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button.btn-danger {
+            background-color: #e74c3c;
+        }
+        button.btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        button.btn-success {
+            background-color: #2ecc71;
+        }
+        button.btn-success:hover {
+            background-color: #27ae60;
+        }
+
+        .info-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .info-card {
+            background-color: #fff;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .card-content {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 2px;
+        }
+
+        .card-description {
+            font-size: 13px;
+            color: #555;
+            line-height: 1.3;
+        }
+
+        .card-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 10px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+            color: #555;
+        }
+        .icon-btn:hover {
+            color: #000;
+        }
+
+        .audio-icon {
+            font-size: 20px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        /* Modal ablak stílusok */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-content input, .modal-content textarea {
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .loading-text {
+            font-size: 12px;
+            color: #e67e22;
+            font-style: italic;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Hotel Információs Sávok</h1>
+
+    <div class="controls">
+        <label for="languageSelect">Nyelv:</label>
+        <select id="languageSelect" onchange="updateLanguage()">
+            <option value="hu">Magyar</option>
+            <option value="en">English (Angol)</option>
+            <option value="de">Deutsch (Német)</option>
+            <option value="es">Español (Spanyol)</option>
+            <option value="it">Italiano (Olasz)</option>
+            <option value="zh">中文 (Kínai)</option>
+        </select>
+    </div>
+
+    <div class="action-bar">
+        <button class="btn-success" onclick="openAddModal()">+ Új kártya</button>
+        <button onclick="saveData()">Mentés fájlba</button>
+        <button onclick="document.getElementById('fileInput').click()">Betöltés fájrból</button>
+        <input type="file" id="fileInput" style="display: none;" onchange="loadData(event)">
+    </div>
+
+    <div class="info-container" id="infoContainer">
+        <!-- Ide generálódnak dinamikusan a kártyák -->
+    </div>
+
+    <!-- Szerkesztő / Hozzáadó Modal -->
+    <div class="modal" id="cardModal">
+        <div class="modal-content">
+            <h3 id="modalTitle" style="margin-top:0; font-size:16px;">Kártya szerkesztése</h3>
+            <input type="hidden" id="editCardKey">
+            
+            <label style="font-size:12px;">Cím (Magyar):</label>
+            <input type="text" id="inputTitleHu" placeholder="Pl. 4. Étterem">
+            
+            <label style="font-size:12px;">Leírás (Csak a magyart kell megadni):</label>
+            <textarea id="inputDescHu" rows="3" placeholder="Magyar leírás, amit automatikusan lefordítunk..."></textarea>
+            
+            <div class="loading-text" id="loadingText">⏳ Automatikus fordítás folyamatban a többi nyelvre...</div>
+
+            <!-- Rejtett mezők a többi nyelvnek, hogy elmentődjenek a háttérben -->
+            <input type="hidden" id="inputDescEn">
+            <input type="hidden" id="inputDescDe">
+            <input type="hidden" id="inputDescEs">
+            <input type="hidden" id="inputDescIt">
+            <input type="hidden" id="inputDescZh">
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button onclick="closeModal()" style="background-color: #95a5a6;">Mégse</button>
+                <button class="btn-success" onclick="saveCardData()">Mentés és Fordítás</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let cardData = {
+            reception: {
+                hu: { title: "1. Recepció és Bejelentkezés", desc: "A recepció 0-24 órában nyitva tart. A szobák elfoglalása 14:00-tól lehetséges.", speech: "Recepció és Bejelentkezés. A recepció 0-24 órában nyitva tart. A szobák elfoglalása 14 órától lehetséges." },
+                en: { title: "1. Recepció és Bejelentkezés", desc: "The reception is open 24/7. Check-in is available from 2:00 PM.", speech: "Reception and Check-in. The reception is open 24/7. Check-in is available from 2:00 PM." },
+                de: { title: "1. Recepció és Bejelentkezés", desc: "Die Rezeption ist rund um die Uhr geöffnet. Check-in ist ab 14:00 Uhr möglich.", speech: "Rezeption und Check-in. Die Rezeption ist rund um die Uhr geöffnet. Check-in ist ab 14 Uhr möglich." },
+                es: { title: "1. Recepció és Bejelentkezés", desc: "La recepción está abierta las 24 horas. El check-in es a partir de las 14:00.", speech: "Recepción y Registro. La recepción está abierta las 24 horas. El registro es a partir de las 14 horas." },
+                it: { title: "1. Recepció és Bejelentkezés", desc: "La reception è aperta 24 ore su 24. Il check-in è disponibile dalle 14:00.", speech: "Reception e Check-in. La reception è aperta 24 ore su 24. Il check-in è disponibile dalle ore 14." },
+                zh: { title: "1. Recepció és Bejelentkezés", desc: "前台24小时开放。下午 2:00 开始办理入住。", speech: "前台与入住登记。前台24小时开放。下午两点开始办理入住。" }
+            },
+            breakfast: {
+                hu: { title: "2. Svédasztalos Reggeli", desc: "Bőséges büféreggeli várja a vendégeket az étteremben.", speech: "Svédasztalos Reggeli. Bőséges büféreggeli várja a vendégeket az étteremben." },
+                en: { title: "2. Svédasztalos Reggeli", desc: "A rich breakfast buffet awaits guests in the restaurant.", speech: "Buffet Breakfast. A rich breakfast buffet awaits guests in the restaurant." },
+                de: { title: "2. Svédasztalos Reggeli", desc: "Ein reichhaltiges Frühstücksbuffet erwartet Sie im Restaurant.", speech: "Frühstücksbuffet. Ein reichhaltiges Frühstücksbuffet erwartet Sie im Restaurant." },
+                es: { title: "2. Svédasztalos Reggeli", desc: "Un variado desayuno buffet espera a los huéspedes en el restaurante.", speech: "Desayuno Buffet. Un variado desayuno buffet espera a los huéspedes en el restaurante." },
+                it: { title: "2. Svédasztalos Reggeli", desc: "Una ricca colazione a buffet attende gli ospiti nel ristorante.", speech: "Colazione a Buffet. Una ricca colazione a buffet attende gli ospiti nel ristorante." },
+                zh: { title: "2. Svédasztalos Reggeli", desc: "餐厅为客人准备了丰盛的自助早餐。", speech: "自助早餐。餐厅为客人准备了丰盛的自助早餐。" }
+            },
+            wellness: {
+                hu: { title: "3. Wellness és Medence", desc: "Szauna, jakuzzi és beltéri medence díjmentesen használható.", speech: "Wellness és Medence. Szauna, jakuzzi és beltéri medence díjmentesen használható." },
+                en: { title: "3. Wellness és Medence", desc: "Sauna, jacuzzi and indoor pool are free to use for hotel guests.", speech: "Wellness and Pool. Sauna, jacuzzi and indoor pool are free to use for hotel guests." },
+                de: { title: "3. Wellness és Medence", desc: "Sauna, Whirlpool und Hallenbad stehen den Gästen kostenlos zur Verfügung.", speech: "Wellness and Pool. Sauna, Whirlpool und Hallenbad stehen den Gästen kostenlos zur Verfügung." },
+                es: { title: "3. Wellness és Medence", desc: "La sauna, el jacuzzi y la piscina cubierta son de uso gratuito.", speech: "Spa y Piscina. La sauna, el jacuzzi y la piscina cubierta son de uso gratuito." },
+                it: { title: "3. Wellness és Medence", desc: "Sauna, idromassaggio e piscina coperta sono ad uso gratuito.", speech: "Wellness e Piscina. Sauna, idromassaggio e piscina coperta sono ad uso gratuito." },
+                zh: { title: "3. Wellness és Medence", desc: "桑拿、水疗按摩池和室内游泳池供客人免费使用。", speech: "水疗与泳池。桑拿、水疗按摩池和室内游泳池供客人免费使用。" }
+            }
+        };
+
+        const languages = {
+            en: 'en',
+            de: 'de',
+            es: 'es',
+            it: 'it',
+            zh: 'zh'
+        };
+
+        function renderCards() {
+            const container = document.getElementById('infoContainer');
+            container.innerHTML = '';
+            const lang = document.getElementById('languageSelect').value;
+
+            for (let cardKey in cardData) {
+                const data = cardData[cardKey][lang] || cardData[cardKey]['hu'];
+                const titleText = cardData[cardKey]['hu'].title;
+
+                const cardHtml = `
+                    <div class="info-card" id="card-${cardKey}">
+                        <div class="card-content" onclick="speakCard('${cardKey}')">
+                            <div class="card-title" id="${cardKey}-title">${titleText}</div>
+                            <div class="card-description" id="${cardKey}-desc">${data.desc}</div>
+                        </div>
+                        <div class="card-actions">
+                            <span class="audio-icon" onclick="speakCard('${cardKey}')" title="Felolvasás">🔊</span>
+                            <button class="icon-btn" onclick="openEditModal('${cardKey}')" title="Szerkesztés">✏️</button>
+                            <button class="icon-btn" onclick="deleteCard('${cardKey}')" title="Törlés">🗑️</button>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHtml;
+            }
+        }
+
+        function updateLanguage() {
+            const lang = document.getElementById('languageSelect').value;
+            for (let cardKey in cardData) {
+                const data = cardData[cardKey][lang] || cardData[cardKey]['hu'];
+                const titleElem = document.getElementById(`${cardKey}-title`);
+                const descElem = document.getElementById(`${cardKey}-desc`);
+
+                if (titleElem) titleElem.textContent = cardData[cardKey]['hu'].title;
+                if (descElem) descElem.textContent = data.desc;
+            }
+        }
+
+        function speakCard(cardKey) {
+            const lang = document.getElementById('languageSelect').value;
+            const textToSpeak = cardData[cardKey][lang] ? cardData[cardKey][lang].speech || cardData[cardKey][lang].desc : cardData[cardKey]['hu'].desc;
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = lang;
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("A böngésződ nem támogatja a szövegfelolvasást!");
+            }
+        }
+
+        function deleteCard(cardKey) {
+            if (confirm("Biztosan törölni szeretnéd ezt a kártyát?")) {
+                delete cardData[cardKey];
+                renderCards();
+            }
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = "Új kártya hozzáadása";
+            document.getElementById('editCardKey').value = '';
+            document.getElementById('inputTitleHu').value = '';
+            document.getElementById('inputDescHu').value = '';
+            for (let l in languages) {
+                document.getElementById(`inputDesc${l.charAt(0).toUpperCase() + l.slice(1)}`).value = '';
+            }
+            document.getElementById('cardModal').style.display = 'flex';
+        }
+
+        function openEditModal(cardKey) {
+            document.getElementById('modalTitle').textContent = "Kártya szerkesztése";
+            document.getElementById('editCardKey').value = cardKey;
+            document.getElementById('inputTitleHu').value = cardData[cardKey]['hu'].title;
+            document.getElementById('inputDescHu').value = cardData[cardKey]['hu'].desc;
+            
+            for (let l in languages) {
+                const descVal = cardData[cardKey][l] ? cardData[cardKey][l].desc : '';
+                document.getElementById(`inputDesc${l.charAt(0).toUpperCase() + l.slice(1)}`).value = descVal;
+            }
+            document.getElementById('cardModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('cardModal').style.display = 'none';
+        }
+
+        async function translateText(text, targetLang) {
+            try {
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=hu|${targetLang}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data && data.responseData && data.responseData.translatedText) {
+                    return data.responseData.translatedText;
+                }
+            } catch (e) {
+                console.error("Fordítási hiba: ", e);
+            }
+            return text; // Ha hiba történik, visszatér az eredetivel
+        }
+
+        async function saveCardData() {
+            const cardKey = document.getElementById('editCardKey').value || 'card_' + Date.now();
+            const titleHu = document.getElementById('inputTitleHu').value;
+            const descHu = document.getElementById('inputDescHu').value;
+
+            if (!titleHu || !descHu) {
+                alert("A cím és a magyar leírás megadása kötelező!");
+                return;
+            }
+
+            document.getElementById('loadingText').style.display = 'block';
+
+            if (!cardData[cardKey]) {
+                cardData[cardKey] = {};
+            }
+
+            // Magyar elmentése
+            cardData[cardKey]['hu'] = {
+                title: titleHu,
+                desc: descHu,
+                speech: descHu
+            };
+
+            // Többi nyelv automatikus fordítása
+            for (let l in languages) {
+                const translated = await translateText(descHu, languages[l]);
+                cardData[cardKey][l] = {
+                    title: titleHu,
+                    desc: translated,
+                    speech: translated
+                };
+            }
+
+            document.getElementById('loadingText').style.display = 'none';
+            closeModal();
+            renderCards();
+        }
+
+        function saveData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(cardData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "hotel_info_config.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function loadData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsedData = JSON.parse(e.target.result);
+                    cardData = parsedData;
+                    renderCards();
+                    alert("Sikeres betöltés!");
+                } catch (err) {
+                    alert("Hiba a fájl olvasása közben: nem megfelelő formátum.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        document.addEventListener('DOMContentLoaded', renderCards);
+    </script>
+
+</body>
+</html>
